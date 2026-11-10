@@ -3,14 +3,14 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity cursor is
-  Port (boardstate: in std_logic_vector(255 downto 0);
-        clk, reset, set: in std_logic;
-        cur_ready: out std_logic;
-		enter: in std_logic;
-		left_arrow: in std_logic;
+  Port (boardstate: in std_logic_vector(255 downto 0);		-- unsure if we need the boardstate as an input to this file, as all the file will output
+        clk, reset: in std_logic;							-- is the to and from addresses, the ready if we want it, and the address of the current
+		enter: in std_logic;								-- cusor square, it won't do any bit operations on the boardstate nor needs it to know 
+		left_arrow: in std_logic;							-- where the player is if we're starting at 0,0 every time
 		right_arrow: in std_logic;
 		up_arrow: in std_logic;
 		down_arrow: in std_logic;
+		cur_ready: out std_logic;
 		pto, pfrom: out std_logic_vector(5 downto 0);
 		cur_sq: out std_logic_vector(5 downto 0));
 end ChessBoard;
@@ -114,6 +114,6 @@ signal row_pd, row_pu, col_pd, col_pu: std_logic_vector(2 downto 0);	-- 3 bit da
 	cur_sq <= square_over;
 	pfrom <= row_pu & col_pu;
 	pto <= row_pd & col_pd;
-	cur_ready <= '1';
-
+	cur_ready <= '1'; 													--i dont know if we want to use a ready for this or if it's properly implemented
+																		--but it's here if we want it
 end beh;
