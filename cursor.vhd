@@ -11,7 +11,7 @@ entity cursor is
 		right_arrow: in std_logic;
 		up_arrow: in std_logic;
 		down_arrow: in std_logic;
-		to, from: out std_logic_vector(5 downto 0);
+		pto, pfrom: out std_logic_vector(5 downto 0);
 		cur_sq: out std_logic_vector(5 downto 0));
 end ChessBoard;
 
@@ -45,7 +45,7 @@ signal row_pd, row_pu, col_pd, col_pu: std_logic_vector(2 downto 0);	-- 3 bit da
 	end process;
 	
 	process(enter, left_arrow, right_arrow, up_arrow, down_arrow)
-		square_over <= "000000";
+		square_over <= "000000";											--unsure if these are necessary here, or if they'll do anything unwanted to the program
 		col_pu <= "000";
 		col_pd <= "000";
 		row_pu <= "000";
@@ -54,18 +54,18 @@ signal row_pd, row_pu, col_pd, col_pu: std_logic_vector(2 downto 0);	-- 3 bit da
 		cur_ready <= '0';
 		
 		if (enter = '1') then
-			if piece_selected <= 0 																						--if we're picking up a piece
+			if piece_selected <= 0 											--if we're picking up a piece
 				col_pu_next <= square_over(2 downto 0);
 				row_pu_next <= square_over(5 downto 3);
 				piece_selected_next <= 1;
-				wait(50ms);
-			else
-				if player_turn = 1																						--switch player turn when placing piece
+				wait(50ms);													--arbitrary wait value to make sure we're not going from one side of
+			else															--screen to the other, can be changed if necessary
+				if player_turn = 1											--switch player turn when placing piece
 					player_turn <= 0;
 				else
 					player_turn <= 1;
 				end if;
-				piece_selected <= 0;
+				piece_selected <= 0;										--placing down
 				col_pd_next <= square_over(2 downto 0);
 				row_pd_next <= square_over(5 downto 3);
 				wait(50ms);
@@ -73,7 +73,7 @@ signal row_pd, row_pu, col_pd, col_pu: std_logic_vector(2 downto 0);	-- 3 bit da
 		
 	-- detect movement (change value of square_over) based on key presses
 		elsif (left_arrow = '1') then
-			if (square_over(2 downto 0) = "000") then  							--detect if we're on the zeroth column so that we dont move off the board
+			if (square_over(2 downto 0) = "000") then  						--detect if we're on the zeroth column so that we dont move off the board
 				square_over_next(2 downto 0) <= "000";
 				wait(50ms);
 			else 
@@ -82,7 +82,7 @@ signal row_pd, row_pu, col_pd, col_pu: std_logic_vector(2 downto 0);	-- 3 bit da
 			end if;
 			
 		elsif (right_arrow = '1') then
-			if (square_over(2 downto 0) = "111") then   								--detect if we're on the seventh column so that we dont move off the board
+			if (square_over(2 downto 0) = "111") then   					--detect if we're on the seventh column so that we dont move off the board
 				square_over_next(2 downto 0) <= "111";
 				wait(50ms);
 			else
@@ -91,7 +91,7 @@ signal row_pd, row_pu, col_pd, col_pu: std_logic_vector(2 downto 0);	-- 3 bit da
 			end if;
 			
 		elsif (up_arrow = '1') then
-			if (square_over(5 downto 3) <= "000") then   							--detect if we're on the zero (top) row so that we dont move off the board
+			if (square_over(5 downto 3) <= "000") then   					--detect if we're on the zero (top) row so that we dont move off the board
 				square_over_next(5 downto 3) <= "000";
 				wait(50ms);
 			else
@@ -100,7 +100,7 @@ signal row_pd, row_pu, col_pd, col_pu: std_logic_vector(2 downto 0);	-- 3 bit da
 			end if;
 			
 		elsif (down_arrow = '1') then
-			if (square_over(5 downto 3) <= "111") then   							--detect if we're on the seven (bottom) row so that we dont move off the board
+			if (square_over(5 downto 3) <= "111") then   					--detect if we're on the seven (bottom) row so that we dont move off the board
 				square_over_next(5 downto 3) <= "111";
 				wait(50ms);
 			else
@@ -112,8 +112,8 @@ signal row_pd, row_pu, col_pd, col_pu: std_logic_vector(2 downto 0);	-- 3 bit da
 	end process;
 	
 	cur_sq <= square_over;
-	from <= row_pu & col_pu;
-	to <= row_pd & col_pd;
+	pfrom <= row_pu & col_pu;
+	pto <= row_pd & col_pd;
 	cur_ready <= '1';
 
 end beh;
