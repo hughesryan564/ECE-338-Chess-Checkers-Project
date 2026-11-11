@@ -13,7 +13,7 @@ entity cursor is
 		cur_ready: out std_logic;
 		pto, pfrom: out std_logic_vector(5 downto 0);
 		cur_sq: out std_logic_vector(5 downto 0));
-end ChessBoard;
+end cursor;
 
 architecture beh of cursor is
 
