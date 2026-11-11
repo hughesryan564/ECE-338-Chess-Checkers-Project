@@ -11,7 +11,7 @@ entity cursor is
 		up_arrow: in std_logic;
 		down_arrow: in std_logic;
 		cur_ready: out std_logic;
-		--pto, pfrom: out std_logic_vector(5 downto 0);
+		pto, pfrom: out std_logic_vector(5 downto 0);
 		cur_sq: out std_logic_vector(5 downto 0));
 end cursor;
 
@@ -86,6 +86,8 @@ begin
 			col_pd <= col_pd_next;
 			piece_selected <= piece_selected_next;
 			player_turn <= player_turn_next;
+			ready_1 <= ready_1_next;
+			ready_2 <= ready_2_next;
 		end if;
 	end process;
 	
@@ -98,12 +100,15 @@ begin
 		row_pd_next <= "000";
 		piece_selected_next <= '0';
 		cur_ready <= '0';
+		ready_1 <= '0';
+		ready_2 <= '0';
 		
 		if (enter = '1') then
 			if piece_selected <= '0' then									--if we're picking up a piece
 				col_pu_next <= square_over(2 downto 0);
 				row_pu_next <= square_over(5 downto 3);
-				piece_selected_next <= '1';									
+				piece_selected_next <= '1';
+				ready_1_next <= '1';
 			else															
 				if player_turn = '1'	then										--switch player turn when placing piece
 					player_turn_next <= '0';
@@ -113,8 +118,9 @@ begin
 				piece_selected <= '0';										--placing down
 				col_pd_next <= square_over(2 downto 0);
 				row_pd_next <= square_over(5 downto 3);
+				ready_2_next <= '1';
 			end if;
-		    cur_ready <= '1';
+
 	-- detect movement (change value of square_over) based on key presses
 		elsif (left_arrow = '1') then
 			if (square_over(2 downto 0) = "000") then  						--detect if we're on the zeroth column so that we dont move off the board
@@ -125,7 +131,7 @@ begin
 				square_over_next(5 downto 3) <= next3;		--think of the array structure for why its + instead of - here
 				square_over_next(2 downto 0) <= next4;
 			end if;
-			cur_ready <= '1';
+			
 		elsif (right_arrow = '1') then
 			if (square_over(2 downto 0) = "111") then   					--detect if we're on the seventh column so that we dont move off the board
 				square_over_next(2 downto 0) <= "111";
@@ -135,7 +141,7 @@ begin
 				square_over_next(5 downto 3) <= next3;		--think of the array structure for why its + instead of - here
 				square_over_next(2 downto 0) <= next4;
 			end if;
-			cur_ready <= '1';
+			
 		elsif (up_arrow = '1') then
 			if (square_over(5 downto 3) <= "000") then   					--detect if we're on the zero (top) row so that we dont move off the board
 				square_over_next(5 downto 3) <= "000";
@@ -145,7 +151,7 @@ begin
 				square_over_next(5 downto 3) <= next3;		--think of the array structure for why its + instead of - here
 				square_over_next(2 downto 0) <= next4;
 			end if;
-			cur_ready <= '1';
+			
 			
 		elsif (down_arrow = '1') then
 			if (square_over(5 downto 3) <= "111") then   					--detect if we're on the seven (bottom) row so that we dont move off the board
@@ -155,14 +161,15 @@ begin
 			    next5 <= next1;
 				square_over_next(5 downto 3) <= next3;		--think of the array structure for why its + instead of - here
 				square_over_next(2 downto 0) <= next4;
-				cur_ready <= '1';
+				
 			end if;
-			cur_ready <= '1';
+			
 		end if;
 	end process;
-	
+
+	cur_ready <= ready_1 and ready_2;
 	cur_sq <= square_over;
-	--pfrom <= row_pu & col_pu;
-	--pto <= row_pd & col_pd;												--i dont know if we want to use a ready for this or if it's properly implemented
+	pfrom <= row_pu & col_pu;
+	pto <= row_pd & col_pd;												--i dont know if we want to use a ready for this or if it's properly implemented
 																		--but it's here if we want it
 end beh;
