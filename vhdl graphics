@@ -763,13 +763,33 @@ constant blackpawndarksquare: rom_type:= (
 
 
 
-   signal rom_addr, rom_col: unsigned(5 downto 0);
-   signal rom_data: std_logic_vector(89 downto 0);
-   signal rom_bit: std_logic;
-   
-   signal rom_adr, rom_coll: unsigned(5 downto 0);
-   signal rom_datta: std_logic_vector(89 downto 0);
-   signal rom_bitt: std_logic_vector (1 downto 0);
+   signal rom_king_addr, rom_king_col: unsigned(5 downto 0);
+   signal rom_king_data: std_logic_vector(44 downto 0);
+   signal rom_king_bit: std_logic;
+
+   signal rom_queen_addr, rom_queen_col: unsigned(5 downto 0);
+   signal rom_queen_data: std_logic_vector(44 downto 0);
+   signal rom_queen_bit: std_logic;
+
+
+   signal rom_bish_addr, rom_bish_col: unsigned(5 downto 0);
+   signal rom_bish_data: std_logic_vector(44 downto 0);
+   signal rom_bish_bit: std_logic;
+
+
+   signal rom_kght_addr, rom_kght_col: unsigned(5 downto 0);
+   signal rom_kght_data: std_logic_vector(44 downto 0);
+   signal rom_kght_bit: std_logic;
+
+
+   signal rom_rook_addr, rom_rook_col: unsigned(5 downto 0);
+   signal rom_rook_data: std_logic_vector(44 downto 0);
+   signal rom_rook_bit: std_logic;
+
+
+   signal rom_pawn_addr, rom_pawn_col: unsigned(5 downto 0);
+   signal rom_pawn_data: std_logic_vector(44 downto 0);
+   signal rom_pawn_bit: std_logic;
 
 -- object output signals -- new signal to indicate if scan coord is within ball
    signal bar_on, sq_ball_on, rd_ball_on_black, wall_on, rd_ball_on_white, ou_ball_on : std_logic;
@@ -784,6 +804,8 @@ constant blackpawndarksquare: rom_type:= (
    signal wall_rgb, bar_rgb, black_rgb,white_rgb: std_logic_vector(2 downto 0);
    signal WtRk1_on, WtRk2_on, WtBish1_on, WtBish2_on, WQueen_on, WtKght1_on, WtKght2_on: std_logic;
    signal BlkRk1_on, BlkRk2_on, BlkBish1_on, BlkBish2_on, BlkQueen_on, BlkKght1_on, BlkKght2_on: std_logic;
+   signal WtRk1, WtRk2, WtBish1, WtBish2, WQueen, WtKght1, WtKght2, std_logic;
+   signal BlkRk1, BlkRk2, BlkBish, BlkBish2, BlkQueen, BlkKght1, BlkKght: std_logic;
 
 -- ======================================================================================================
    begin
@@ -903,106 +925,86 @@ constant blackpawndarksquare: rom_type:= (
 -- pixel within square ball
    sq_ball_on <= '1' when (E1_X_L <= pix_x) and (pix_x <= E1_X_R) and (E1_Y_T <= pix_y) and (pix_y <= E1_Y_B) else '0';
    ou_ball_on <= '1' when (E8_X_L <= pix_x) and (pix_x <= E8_X_R) and (E8_Y_T <= pix_y) and (pix_y <= E8_Y_B) else '0';
-   WtRk1_on <= '1' when (A1_X_L <= pix_x) and (pix_x <= A1_X_R) and (A1_Y_T <= pix_y) and (pix_y <= A1_Y_B) else '0';
-   WtRk2_on <= '1' when (H1_X_L <= pix_x) and (pix_x <= H1_X_R) and (H1_Y_T <= pix_y) and (pix_y <= H1_Y_B) else '0';
-   BlkRk1_on <= '1' when (A8_X_L <= pix_x) and (pix_x <= A8_X_R) and (A8_Y_T <= pix_y) and (pix_y <= A8_Y_B) else '0';
-   BlkRk2_on <= '1' when (H8_X_L <= pix_x) and (pix_x <= H8_X_R) and (H8_Y_T <= pix_y) and (pix_y <= H8_Y_B) else '0';
-   WtBish1_on <= '1' when (C1_X_L <= pix_x) and (pix_x <= C1_X_R) and (C1_Y_T <= pix_y) and (pix_y <= C1_Y_B) else '0';
-   WtBish2_on <= '1' when (F1_X_L <= pix_x) and (pix_x <= F1_X_R) and (F1_Y_T <= pix_y) and (pix_y <= F1_Y_B) else '0';
-   BlkBish1_on <= '1' when (C8_X_L <= pix_x) and (pix_x <= C8_X_R) and (C8_Y_T <= pix_y) and (pix_y <= C8_Y_B) else '0';
-   BlkBish2_on <= '1' when (C8_X_L <= pix_x) and (pix_x <= C8_X_R) and (C8_Y_T <= pix_y) and (pix_y <= C8_Y_B) else '0';
-   WQueen_on <= '1' when (D1_X_L <= pix_x) and (pix_x <= D1_X_R) and (D1_Y_T <= pix_y) and (pix_y <= D1_Y_B) else '0';
-   BlkQueen_on <= '1' when (D8_X_L <= pix_x) and (pix_x <= D8_X_R) and (D8_Y_T <= pix_y) and (pix_y <= D8_Y_B) else '0';
-   WtKght1_on <= '1' when (B1_X_L <= pix_x) and (pix_x <= B1_X_R) and (B1_Y_T <= pix_y) and (pix_y <= B1_Y_B) else '0';
-   WtKght2_on <= '1' when (G1_X_L <= pix_x) and (pix_x <= G1_X_R) and (G1_Y_T <= pix_y) and (pix_y <= G1_Y_B) else '0';
-   BlkKght1_on <= '1' when (B8_X_L <= pix_x) and (pix_x <= B8_X_R) and (B8_Y_T <= pix_y) and (pix_y <= B8_Y_B) else '0';
-   BlkKght2_on <= '1' when (G8_X_L <= pix_x) and (pix_x <= G8_X_R) and (G8_Y_T <= pix_y) and (pix_y <= G8_Y_B) else '0';
+   WtRk1<= '1' when (A1_X_L <= pix_x) and (pix_x <= A1_X_R) and (A1_Y_T <= pix_y) and (pix_y <= A1_Y_B) else '0';
+   WtRk2<= '1' when (H1_X_L <= pix_x) and (pix_x <= H1_X_R) and (H1_Y_T <= pix_y) and (pix_y <= H1_Y_B) else '0';
+   BlkRk1<= '1' when (A8_X_L <= pix_x) and (pix_x <= A8_X_R) and (A8_Y_T <= pix_y) and (pix_y <= A8_Y_B) else '0';
+   BlkRk2<= '1' when (H8_X_L <= pix_x) and (pix_x <= H8_X_R) and (H8_Y_T <= pix_y) and (pix_y <= H8_Y_B) else '0';
+   WtBish1<= '1' when (C1_X_L <= pix_x) and (pix_x <= C1_X_R) and (C1_Y_T <= pix_y) and (pix_y <= C1_Y_B) else '0';
+   WtBish2<= '1' when (F1_X_L <= pix_x) and (pix_x <= F1_X_R) and (F1_Y_T <= pix_y) and (pix_y <= F1_Y_B) else '0';
+   BlkBish1<= '1' when (C8_X_L <= pix_x) and (pix_x <= C8_X_R) and (C8_Y_T <= pix_y) and (pix_y <= C8_Y_B) else '0';
+   BlkBish2<= '1' when (C8_X_L <= pix_x) and (pix_x <= C8_X_R) and (C8_Y_T <= pix_y) and (pix_y <= C8_Y_B) else '0';
+   WQueen<= '1' when (D1_X_L <= pix_x) and (pix_x <= D1_X_R) and (D1_Y_T <= pix_y) and (pix_y <= D1_Y_B) else '0';
+   BlkQueen<= '1' when (D8_X_L <= pix_x) and (pix_x <= D8_X_R) and (D8_Y_T <= pix_y) and (pix_y <= D8_Y_B) else '0';
+   WtKght1<= '1' when (B1_X_L <= pix_x) and (pix_x <= B1_X_R) and (B1_Y_T <= pix_y) and (pix_y <= B1_Y_B) else '0';
+   WtKght2<= '1' when (G1_X_L <= pix_x) and (pix_x <= G1_X_R) and (G1_Y_T <= pix_y) and (pix_y <= G1_Y_B) else '0';
+   BlkKght1<= '1' when (B8_X_L <= pix_x) and (pix_x <= B8_X_R) and (B8_Y_T <= pix_y) and (pix_y <= B8_Y_B) else '0';
+   BlkKght2<= '1' when (G8_X_L <= pix_x) and (pix_x <= G8_X_R) and (G8_Y_T <= pix_y) and (pix_y <= G8_Y_B) else '0';
 
 
 
 -- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
-   rom_addr <= pix_y(5 downto 0) - ball_y_t;
+   rom_king_addr <= pix_y(5 downto 0) - ball_y_t;
+   rom_king_col <= pix_x(5 downto 0) - ball_x_l; -- ROM column
+   rom_king_data <= BALL_ROM(to_integer(rom_addr)); -- Get row data
+   rom_king_bit <= rom_data(to_integer(rom_col)); -- Get column bit
 
--- ROM column
-   rom_col <= pix_x(5 downto 0) - ball_x_l;
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_queen_addr <= pix_y(5 downto 0) - ball_y_t;
+   rom_queen_col <= pix_x(5 downto 0) - ball_x_l; -- ROM column
+   rom_queen_data <= BALL_ROM(to_integer(rom_addr)); -- Get row data
+   rom_queen_bit <= rom_data(to_integer(rom_col)); -- Get column bit
 
--- Get row data
-   rom_data <= BALL_ROM(to_integer(rom_addr));
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_bish_addr <= pix_y(5 downto 0) - ball_y_t;
+   rom_bish_col <= pix_x(5 downto 0) - ball_x_l; -- ROM column
+   rom_bish_data <= BALL_ROM(to_integer(rom_addr)); -- Get row data
+   rom_bish_bit <= rom_data(to_integer(rom_col)); -- Get column bit
 
--- Get column bit
-   rom_bit <= rom_data(to_integer(rom_col));
-   
-   -- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
-   rom_addr <= pix_y(5 downto 0) - ball_y_t;
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_kght_addr <= pix_y(5 downto 0) - ball_y_t;
+   rom_kght_col <= pix_x(5 downto 0) - ball_x_l; -- ROM column
+   rom_kght_data <= BALL_ROM(to_integer(rom_addr)); -- Get row data
+   rom_kght_bit <= rom_data(to_integer(rom_col)); -- Get column bit
 
--- ROM column
-   rom_col <= pix_x(5 downto 0) - ball_x_l;
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_rook_addr <= pix_y(5 downto 0) - ball_y_t;
+   rom_rook_col <= pix_x(5 downto 0) - ball_x_l; -- ROM column
+   rom_rook_data <= BALL_ROM(to_integer(rom_addr)); -- Get row data
+   rom_rook_bit <= rom_data(to_integer(rom_col)); -- Get column bit
 
--- Get row data
-   rom_data <= blackqueendarksquare(to_integer(rom_addr));
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_pawn_addr <= pix_y(5 downto 0) - ball_y_t;
+   rom_pawn_col <= pix_x(5 downto 0) - ball_x_l; -- ROM column
+   rom_pawn_data <= BALL_ROM(to_integer(rom_addr)); -- Get row data
+   rom_pawn_bit <= rom_data(to_integer(rom_col)); -- Get column bit
 
--- Get column bit
-   rom_bit <= rom_data(to_integer(rom_col));
-   
-   -- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
-   rom_addr <= pix_y(5 downto 0) - ball_y_t;
 
--- ROM column
-   rom_col <= pix_x(5 downto 0) - ball_x_l;
-
--- Get row data
-   rom_data <= blackrookdarkbackground(to_integer(rom_addr));
-
--- Get column bit
-   rom_bit <= rom_data(to_integer(rom_col));
-   
-   -- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
-   rom_addr <= pix_y(5 downto 0) - ball_y_t;
-
--- ROM column
-   rom_col <= pix_x(5 downto 0) - ball_x_l;
-
--- Get row data
-   rom_data <= blackknightdarksquare(to_integer(rom_addr));
-
--- Get column bit
-   rom_bit <= rom_data(to_integer(rom_col));
-   
-   -- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
-   rom_addr <= pix_y(5 downto 0) - ball_y_t;
-
--- ROM column
-   rom_col <= pix_x(5 downto 0) - ball_x_l;
-
--- Get row data
-   rom_data <= blackbishopdarksquare(to_integer(rom_addr));
-
--- Get column bit
-   rom_bit <= rom_data(to_integer(rom_col));
    
 
 
 -- Turn ball on only if within square and the ROM bit is 1.
-   rd_ball_on_white <= '1' when (sq_ball_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_white <= '1' when (WtRk1_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_white <= '1' when (WtRk2_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_white <= '1' when (WtBish1_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_white <= '1' when (WtBish2_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_white <= '1' when (WQueen_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_white <= '1' when (WtKght1_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_white <= '1' when (WtKght2_on = '1') and (rom_bit = '1') else '0';
+   rd_ball_on_white <= '1' when (sq_ball_on = '1') and (rom_king_bit = '1') else '0';
+   WtRk1_on <= '1' when (WtRk1 = '1') and (rom_rook_bit = '1') else '0';
+   WtRk2_on <= '1' when (WtRk2 = '1') and (rom_rook_bit = '1') else '0';
+   WtBish1_on <= '1' when (WtBish1 = '1') and (rom_bish_bit = '1') else '0';
+   WtBis2_on <= '1' when (WtBis2 = '1') and (rom_bish_bit = '1') else '0';
+   WQueen_on <= '1' when (WQueen = '1') and (rom_queen_bit = '1') else '0';
+   WtKght1_on <= '1' when (WtKght1 = '1') and (rom_kght_bit = '1') else '0';
+   WtKght2_on <= '1' when (WtKght2 = '1') and (rom_kght_bit = '1') else '0';
 
 
 
 -- Turn ball on only if within square and the ROM bit is 1.
-   rd_ball_on_black <= '1' when (ou_ball_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_black <= '1' when (BlkRk1_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_black <= '1' when (BlkRk2_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_black <= '1' when (BlkBish1_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_black <= '1' when (BlkBish2_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_black <= '1' when (BlkQueen_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_black <= '1' when (BlkKght1_on = '1') and (rom_bit = '1') else '0';
-   rd_ball_on_black <= '1' when (BlkKght2_on = '1') and (rom_bit = '1') else '0';
+   rd_ball_on_black <= '1' when (ou_ball_on = '1') and (rom_king_bit = '1') else '0';
+   BlkRk1_on <= '1' when (BlkRk1 = '1') and (rom_rook_bit = '1') else '0';
+   BlkRk2_on <= '1' when (BlkRk2 = '1') and (rom_rook_bit = '1') else '0';
+   BlkBis1_on <= '1' when (BlkBis1 = '1') and (rom_bish_bit = '1') else '0';
+   BlkBis2_on <= '1' when (BlkBis2 = '1') and (rom_bish_bit = '1') else '0';
+   BlkQueen_on <= '1' when (BlkQueen = '1') and (rom_queen_bit = '1') else '0';
+   BlkKght1_on <= '1' when (BlkKght1 = '1') and (rom_kght_bit = '1') else '0';
+   BlkKght2_on <= '1' when (BlkKght2 = '1') and (rom_kght_bit = '1') else '0';
+
+
    
   
 
