@@ -1,0 +1,875 @@
+-- ======================================================================================================
+-- ======================================================================================================
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity pong_graph_st is
+   port(
+      clk, reset: in std_logic;
+      btn: in std_logic_vector(1 downto 0);
+      video_on: in std_logic;
+      pixel_x, pixel_y: in std_logic_vector(9 downto 0);
+      graph_rgb: out std_logic_vector(2 downto 0)
+   );
+end pong_graph_st;
+
+-- ======================================================================================================
+-- ======================================================================================================
+
+architecture rtl of pong_graph_st is
+
+-- Signal used to control speed of ball and how often pushbuttons are checked for paddle movement.
+   signal refr_tick: std_logic;
+
+-- x, y coordinates (0,0 to (639, 479)
+   signal pix_x, pix_y: unsigned(9 downto 0);
+
+-- Screen dimensions
+   constant MAX_X: integer := 640;
+   constant MAX_Y: integer := 480;
+
+-- A8
+   constant A8_X_L: integer := 0;
+   constant A8_X_R: integer := 45;
+   constant A8_Y_T: integer := 60;
+   constant A8_Y_B: integer := 105;
+
+-- A7
+   constant A7_X_L: integer := 0;
+   constant A7_X_R: integer := 45;
+   constant A7_Y_T: integer := 106;
+   constant A7_Y_B: integer := 151;
+   
+-- A6
+   constant A6_X_L: integer := 0;
+   constant A6_X_R: integer := 45;
+   constant A6_Y_T: integer := 151;
+   constant A6_Y_B: integer := 196;
+   
+-- A5
+   constant A5_X_L: integer := 0;
+   constant A5_X_R: integer := 45;
+   constant A5_Y_T: integer := 197;
+   constant A5_Y_B: integer := 242;
+   
+-- A4
+   constant A4_X_L: integer := 0;
+   constant A4_X_R: integer := 45;
+   constant A4_Y_T: integer := 243;
+   constant A4_Y_B: integer := 288;
+   
+-- A3
+   constant A3_X_L: integer := 0;
+   constant A3_X_R: integer := 45;
+   constant A3_Y_T: integer := 289;
+   constant A3_Y_B: integer := 334;
+   
+-- A2
+   constant A2_X_L: integer := 0;
+   constant A2_X_R: integer := 45;
+   constant A2_Y_T: integer := 335;
+   constant A2_Y_B: integer := 380;
+   
+-- A1
+   constant A1_X_L: integer := 0;
+   constant A1_X_R: integer := 45;
+   constant A1_Y_T: integer := 381;
+   constant A1_Y_B: integer := 426;
+   
+-- ======================================================================================================
+--Col 2
+-- b8
+   constant B8_X_L: integer := 46;
+   constant B8_X_R: integer := 91;
+   constant B8_Y_T: integer := 60;
+   constant B8_Y_B: integer := 105;
+
+-- b7
+   constant B7_X_L: integer := 46;
+   constant B7_X_R: integer := 91;
+   constant B7_Y_T: integer := 106;
+   constant B7_Y_B: integer := 151;
+   
+-- b6
+   constant B6_X_L: integer := 46;
+   constant B6_X_R: integer := 91;
+   constant B6_Y_T: integer := 151;
+   constant B6_Y_B: integer := 196;
+   
+-- b5
+   constant B5_X_L: integer := 46;
+   constant B5_X_R: integer := 91;
+   constant B5_Y_T: integer := 197;
+   constant B5_Y_B: integer := 242;
+   
+-- b4
+   constant B4_X_L: integer := 46;
+   constant B4_X_R: integer := 91;
+   constant B4_Y_T: integer := 243;
+   constant B4_Y_B: integer := 288;
+   
+-- b3
+   constant B3_X_L: integer := 46;
+   constant B3_X_R: integer := 91;
+   constant B3_Y_T: integer := 289;
+   constant B3_Y_B: integer := 334;
+   
+-- b2
+   constant B2_X_L: integer := 46;
+   constant B2_X_R: integer := 91;
+   constant B2_Y_T: integer := 335;
+   constant B2_Y_B: integer := 380;
+   
+-- b1
+   constant B1_X_L: integer := 46;
+   constant B1_X_R: integer := 91;
+   constant B1_Y_T: integer := 381;
+   constant B1_Y_B: integer := 426;
+   
+-- ======================================================================================================
+--Col 3
+-- c8
+   constant C8_X_L: integer := 92;
+   constant C8_X_R: integer := 137;
+   constant C8_Y_T: integer := 60;
+   constant C8_Y_B: integer := 105;
+
+-- c7
+   constant C7_X_L: integer := 92;
+   constant C7_X_R: integer := 137;
+   constant C7_Y_T: integer := 106;
+   constant C7_Y_B: integer := 151;
+   
+-- b6
+   constant C6_X_L: integer := 92;
+   constant C6_X_R: integer := 137;
+   constant C6_Y_T: integer := 151;
+   constant C6_Y_B: integer := 196;
+   
+-- b5
+   constant C5_X_L: integer := 92;
+   constant C5_X_R: integer := 137;
+   constant C5_Y_T: integer := 197;
+   constant C5_Y_B: integer := 242;
+   
+-- b4
+   constant C4_X_L: integer := 92;
+   constant C4_X_R: integer := 137;
+   constant C4_Y_T: integer := 243;
+   constant C4_Y_B: integer := 288;
+   
+-- b3
+   constant C3_X_L: integer := 92;
+   constant C3_X_R: integer := 137;
+   constant C3_Y_T: integer := 289;
+   constant C3_Y_B: integer := 334;
+   
+-- b2
+   constant C2_X_L: integer := 92;
+   constant C2_X_R: integer := 137;
+   constant C2_Y_T: integer := 335;
+   constant C2_Y_B: integer := 380;
+   
+-- b1
+   constant C1_X_L: integer := 92;
+   constant C1_X_R: integer := 137;
+   constant C1_Y_T: integer := 381;
+   constant C1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 4
+-- b8
+   constant D8_X_L: integer := 138;
+   constant D8_X_R: integer := 183;
+   constant D8_Y_T: integer := 60;
+   constant D8_Y_B: integer := 105;
+
+-- b7
+   constant D7_X_L: integer := 138;
+   constant D7_X_R: integer := 183;
+   constant D7_Y_T: integer := 106;
+   constant D7_Y_B: integer := 151;
+   
+-- b6
+   constant D6_X_L: integer := 138;
+   constant D6_X_R: integer := 183;
+   constant D6_Y_T: integer := 151;
+   constant D6_Y_B: integer := 196;
+   
+-- b5
+   constant D5_X_L: integer := 138;
+   constant D5_X_R: integer := 183;
+   constant D5_Y_T: integer := 197;
+   constant D5_Y_B: integer := 242;
+   
+-- b4
+   constant D4_X_L: integer := 138;
+   constant D4_X_R: integer := 183;
+   constant D4_Y_T: integer := 243;
+   constant D4_Y_B: integer := 288;
+   
+-- b3
+   constant D3_X_L: integer := 138;
+   constant D3_X_R: integer := 183;
+   constant D3_Y_T: integer := 289;
+   constant D3_Y_B: integer := 334;
+   
+-- b2
+   constant D2_X_L: integer := 138;
+   constant D2_X_R: integer := 183;
+   constant D2_Y_T: integer := 335;
+   constant D2_Y_B: integer := 380;
+   
+-- b1
+   constant D1_X_L: integer := 138;
+   constant D1_X_R: integer := 183;
+   constant D1_Y_T: integer := 381;
+   constant D1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 5
+-- b8
+   constant E8_X_L: integer := 184;
+   constant E8_X_R: integer := 229;
+   constant E8_Y_T: integer := 60;
+   constant E8_Y_B: integer := 105;
+
+-- b7
+   constant E7_X_L: integer := 184;
+   constant E7_X_R: integer := 229;
+   constant E7_Y_T: integer := 106;
+   constant E7_Y_B: integer := 151;
+   
+-- b6
+   constant E6_X_L: integer := 184;
+   constant E6_X_R: integer := 229;
+   constant E6_Y_T: integer := 151;
+   constant E6_Y_B: integer := 196;
+   
+-- b5
+   constant E5_X_L: integer := 184;
+   constant E5_X_R: integer := 229;
+   constant E5_Y_T: integer := 197;
+   constant E5_Y_B: integer := 242;
+   
+-- b4
+   constant E4_X_L: integer := 184;
+   constant E4_X_R: integer := 229;
+   constant E4_Y_T: integer := 243;
+   constant E4_Y_B: integer := 288;
+   
+-- b3
+   constant E3_X_L: integer := 184;
+   constant E3_X_R: integer := 229;
+   constant E3_Y_T: integer := 289;
+   constant E3_Y_B: integer := 334;
+   
+-- b2
+   constant E2_X_L: integer := 184;
+   constant E2_X_R: integer := 229;
+   constant E2_Y_T: integer := 335;
+   constant E2_Y_B: integer := 380;
+   
+-- b1
+   constant E1_X_L: integer := 184;
+   constant E1_X_R: integer := 229;
+   constant E1_Y_T: integer := 381;
+   constant E1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 6
+-- b8
+   constant F8_X_L: integer := 230;
+   constant F8_X_R: integer := 275;
+   constant F8_Y_T: integer := 60;
+   constant F8_Y_B: integer := 105;
+
+-- b7
+   constant F7_X_L: integer := 230;
+   constant F7_X_R: integer := 275;
+   constant F7_Y_T: integer := 106;
+   constant F7_Y_B: integer := 151;
+   
+-- b6
+   constant F6_X_L: integer := 230;
+   constant F6_X_R: integer := 275;
+   constant F6_Y_T: integer := 151;
+   constant F6_Y_B: integer := 196;
+   
+-- b5
+   constant F5_X_L: integer := 230;
+   constant F5_X_R: integer := 275;
+   constant F5_Y_T: integer := 197;
+   constant F5_Y_B: integer := 242;
+   
+-- b4
+   constant F4_X_L: integer := 230;
+   constant F4_X_R: integer := 275;
+   constant F4_Y_T: integer := 243;
+   constant F4_Y_B: integer := 288;
+   
+-- b3
+   constant F3_X_L: integer := 230;
+   constant F3_X_R: integer := 275;
+   constant F3_Y_T: integer := 289;
+   constant F3_Y_B: integer := 334;
+   
+-- b2
+   constant F2_X_L: integer := 230;
+   constant F2_X_R: integer := 275;
+   constant F2_Y_T: integer := 335;
+   constant F2_Y_B: integer := 380;
+   
+-- b1
+   constant F1_X_L: integer := 230;
+   constant F1_X_R: integer := 275;
+   constant F1_Y_T: integer := 381;
+   constant F1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 7
+-- b8
+   constant G8_X_L: integer := 276;
+   constant G8_X_R: integer := 321;
+   constant G8_Y_T: integer := 60;
+   constant G8_Y_B: integer := 105;
+
+-- b7
+   constant G7_X_L: integer := 276;
+   constant G7_X_R: integer := 321;
+   constant G7_Y_T: integer := 106;
+   constant G7_Y_B: integer := 151;
+   
+-- b6
+   constant G6_X_L: integer := 276;
+   constant G6_X_R: integer := 321;
+   constant G6_Y_T: integer := 151;
+   constant G6_Y_B: integer := 196;
+   
+-- b5
+   constant G5_X_L: integer := 276;
+   constant G5_X_R: integer := 321;
+   constant G5_Y_T: integer := 197;
+   constant G5_Y_B: integer := 242;
+   
+-- b4
+   constant G4_X_L: integer := 276;
+   constant G4_X_R: integer := 321;
+   constant G4_Y_T: integer := 243;
+   constant G4_Y_B: integer := 288;
+   
+-- b3
+   constant G3_X_L: integer := 276;
+   constant G3_X_R: integer := 321;
+   constant G3_Y_T: integer := 289;
+   constant G3_Y_B: integer := 334;
+   
+-- b2
+   constant G2_X_L: integer := 276;
+   constant G2_X_R: integer := 321;
+   constant G2_Y_T: integer := 335;
+   constant G2_Y_B: integer := 380;
+   
+-- b1
+   constant G1_X_L: integer := 276;
+   constant G1_X_R: integer := 321;
+   constant G1_Y_T: integer := 381;
+   constant G1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 8
+-- b8
+   constant H8_X_L: integer := 322;
+   constant H8_X_R: integer := 367;
+   constant H8_Y_T: integer := 60;
+   constant H8_Y_B: integer := 105;
+
+-- b7
+   constant H7_X_L: integer := 322;
+   constant H7_X_R: integer := 367;
+   constant H7_Y_T: integer := 106;
+   constant H7_Y_B: integer := 151;
+   
+-- b6
+   constant H6_X_L: integer := 322;
+   constant H6_X_R: integer := 367;
+   constant H6_Y_T: integer := 151;
+   constant H6_Y_B: integer := 196;
+   
+-- b5
+   constant H5_X_L: integer := 322;
+   constant H5_X_R: integer := 367;
+   constant H5_Y_T: integer := 197;
+   constant H5_Y_B: integer := 242;
+   
+-- b4
+   constant H4_X_L: integer := 322;
+   constant H4_X_R: integer := 367;
+   constant H4_Y_T: integer := 243;
+   constant H4_Y_B: integer := 288;
+   
+-- b3
+   constant H3_X_L: integer := 322;
+   constant H3_X_R: integer := 367;
+   constant H3_Y_T: integer := 289;
+   constant H3_Y_B: integer := 334;
+   
+-- b2
+   constant H2_X_L: integer := 322;
+   constant H2_X_R: integer := 367;
+   constant H2_Y_T: integer := 335;
+   constant H2_Y_B: integer := 380;
+   
+-- b1
+   constant H1_X_L: integer := 322;
+   constant H1_X_R: integer := 367;
+   constant H1_Y_T: integer := 381;
+   constant H1_Y_B: integer := 426;
+-- ======================================================================================================
+
+   constant ball_x_l : integer := 322;
+   constant ball_x_r : integer := 367;
+   constant ball_y_t : integer := 381;
+   constant ball_y_b : integer := 426;
+   
+   constant bal_x_l : integer := 322;
+   constant bal_x_r : integer := 367;
+   constant bal_y_t : integer := 335;
+   constant bal_y_b : integer := 380;
+
+
+-- Paddle left, right, top, bottom and height -- left & right are constant. Top & bottom are signals to allow movement. bar_y_t driven by register below.
+   constant BAR_X_L: integer := 322;
+   constant BAR_X_R: integer := 346;
+   signal bar_y_t, bar_y_b: unsigned(9 downto 0);
+   constant BAR_Y_SIZE: integer := 72;
+
+-- Reg to track top boundary (x position is fixed)
+   signal bar_y_reg, bar_y_next: unsigned( 9 downto 0);
+
+-- Bar moving velocity when a button is pressed -- the amount the bar is moved.
+   constant BAR_V: integer:= 4;
+
+-- Square ball -- ball left, right, top and bottom all vary. Left and top driven by registers below.
+   constant BALL_SIZE: integer := 8;
+
+
+
+-- Reg to track left and top boundary
+   signal ball_x_reg, ball_x_next: unsigned(44 downto 0);
+   signal ball_y_reg, ball_y_next: unsigned(44 downto 0);
+
+-- reg to track ball speed
+   signal x_delta_reg, x_delta_next: unsigned(9 downto 0);
+   signal y_delta_reg, y_delta_next: unsigned(9 downto 0);
+
+-- ball movement can be pos or neg
+   constant BALL_V_P: unsigned(9 downto 0):= to_unsigned(2,10);
+   constant BALL_V_N: unsigned(9 downto 0):= unsigned(to_signed(-2,10));
+
+-- round ball image
+   type rom_type is array(0 to 44) of std_logic_vector(0 to 44);
+
+
+   constant BALL_ROM: rom_type:= (
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000111111111000000000000000000",
+"000000000000000000111111111000000000000000000",
+"000000000000000000111111111000000000000000000",
+"000000000111111000000111000000111111000000000",
+"000000000111111000000111000000111111000000000",
+"000000000111111000000111000000111111000000000",
+"000000111000000111000111000111000000111000000",
+"000000111000000111000111000111000000111000000",
+"000000111000000111000111000111000000111000000",
+"000111000000000000111111111000000000000111000",
+"000111000000000000111111111000000000000111000",
+"000111000000000000111111111000000000000111000",
+"000111000000111000000000000000111000000111000",
+"000111000000111000000000000000111000000111000",
+"000111000000111000000000000000111000000111000",
+"000000111000000111000000000111000001111000000",
+"000000111000000111000000000111000001111000000",
+"000000111000000111000000000111000001111000000",
+"000000000111000000000000000000000111000000000",
+"000000000111000000000000000000000111000000000",
+"000000000111000000000000000000000111000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000111111111111111111111111111000000000",
+"000000000111111111111111111111111111000000000",
+"000000000111111111111111111111111111000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000");
+
+
+   signal rom_addr, rom_col: unsigned(5 downto 0);
+   signal rom_data: std_logic_vector(44 downto 0);
+   signal rom_bit: std_logic;
+   
+   signal rom_wtrook1_addr, rom_wtrook1_col: unsigned(5 downto 0);
+   signal rom_wtrook1_data: std_logic_vector(44 downto 0);
+   signal rom_wtrook1_bit: std_logic;
+   
+   signal rom_adr, rom_coll: unsigned(5 downto 0);
+   signal rom_datta: std_logic_vector(44 downto 0);
+   signal rom_bitt: std_logic;
+
+-- object output signals -- new signal to indicate if scan coord is within ball
+   signal bar_on, sq_ball_on, rd_ball_on_black, wall_on, rd_ball_on_white, ou_ball_on, WtRook1, WtRook1_on : std_logic;
+   signal A8_on, A7_on, A6_on, A5_on, A4_on, A3_on, A2_on, A1_on  : std_logic;
+   signal B8_on, B7_on, B6_on, B5_on, B4_on, B3_on, B2_on, B1_on : std_logic;
+   signal C8_on, C7_on, C6_on, C5_on, C4_on, C3_on, C2_on, C1_on : std_logic;
+   signal D8_on, D7_on, D6_on, D5_on, D4_on, D3_on, D2_on, D1_on : std_logic;
+   signal E8_on, E7_on, E6_on, E5_on, E4_on, E3_on, E2_on, E1_on : std_logic;
+   signal F8_on, F7_on, F6_on, F5_on, F4_on, F3_on, F2_on, F1_on : std_logic;
+   signal G8_on, G7_on, G6_on, G5_on, G4_on, G3_on, G2_on, G1_on : std_logic;
+   signal H8_on, H7_on, H6_on, H5_on, H4_on, H3_on, H2_on, H1_on : std_logic;
+   signal wall_rgb, bar_rgb, ball_rgb,bal_rgb: std_logic_vector(2 downto 0);
+
+-- ======================================================================================================
+   begin
+
+-- ======================================================================================================
+   pix_x <= unsigned(pixel_x);
+   pix_y <= unsigned(pixel_y);
+
+-- Refr_tick: 1-clock tick asserted at start of v_sync, e.g., when the screen is refreshed -- speed is 60 Hz
+   refr_tick <= '1' when (pix_y = 1) and (pix_x = 1) else '0';
+
+-- ======================================================================================================
+
+   A8_on <= '1' when (A8_X_L <= pix_x) and (pix_x <= A8_X_R) and (A8_Y_T <= pix_y) and (pix_y <= A8_Y_B) else '0';
+   A7_on <= '1' when (A7_X_L <= pix_x) and (pix_x <= A7_X_R) and (A7_Y_T <= pix_y) and (pix_y <= A7_Y_B) else '0';
+   A6_on <= '1' when (A6_X_L <= pix_x) and (pix_x <= A6_X_R) and (A6_Y_T <= pix_y) and (pix_y <= A6_Y_B) else '0';
+   A5_on <= '1' when (A5_X_L <= pix_x) and (pix_x <= A5_X_R) and (A5_Y_T <= pix_y) and (pix_y <= A5_Y_B) else '0';
+   A4_on <= '1' when (A4_X_L <= pix_x) and (pix_x <= A4_X_R) and (A4_Y_T <= pix_y) and (pix_y <= A4_Y_B) else '0';
+   A3_on <= '1' when (A3_X_L <= pix_x) and (pix_x <= A3_X_R) and (A3_Y_T <= pix_y) and (pix_y <= A3_Y_B) else '0';
+   A2_on <= '1' when (A2_X_L <= pix_x) and (pix_x <= A2_X_R) and (A2_Y_T <= pix_y) and (pix_y <= A2_Y_B) else '0';
+   A1_on <= '1' when (A1_X_L <= pix_x) and (pix_x <= A1_X_R) and (A1_Y_T <= pix_y) and (pix_y <= A1_Y_B) else '0';
+   
+   B8_on <= '1' when (B8_X_L <= pix_x) and (pix_x <= B8_X_R) and (B8_Y_T <= pix_y) and (pix_y <= B8_Y_B) else '0';
+   B7_on <= '1' when (B7_X_L <= pix_x) and (pix_x <= B7_X_R) and (B7_Y_T <= pix_y) and (pix_y <= B7_Y_B) else '0';
+   B6_on <= '1' when (B6_X_L <= pix_x) and (pix_x <= B6_X_R) and (B6_Y_T <= pix_y) and (pix_y <= B6_Y_B) else '0';
+   B5_on <= '1' when (B5_X_L <= pix_x) and (pix_x <= B5_X_R) and (B5_Y_T <= pix_y) and (pix_y <= B5_Y_B) else '0';
+   B4_on <= '1' when (B4_X_L <= pix_x) and (pix_x <= B4_X_R) and (B4_Y_T <= pix_y) and (pix_y <= B4_Y_B) else '0';
+   B3_on <= '1' when (B3_X_L <= pix_x) and (pix_x <= B3_X_R) and (B3_Y_T <= pix_y) and (pix_y <= B3_Y_B) else '0';
+   B2_on <= '1' when (B2_X_L <= pix_x) and (pix_x <= B2_X_R) and (B2_Y_T <= pix_y) and (pix_y <= B2_Y_B) else '0';
+   B1_on <= '1' when (B1_X_L <= pix_x) and (pix_x <= B1_X_R) and (B1_Y_T <= pix_y) and (pix_y <= B1_Y_B) else '0';
+   
+   C8_on <= '1' when (C8_X_L <= pix_x) and (pix_x <= C8_X_R) and (C8_Y_T <= pix_y) and (pix_y <= C8_Y_B) else '0';
+   C7_on <= '1' when (C7_X_L <= pix_x) and (pix_x <= C7_X_R) and (C7_Y_T <= pix_y) and (pix_y <= C7_Y_B) else '0';
+   C6_on <= '1' when (C6_X_L <= pix_x) and (pix_x <= C6_X_R) and (C6_Y_T <= pix_y) and (pix_y <= C6_Y_B) else '0';
+   C5_on <= '1' when (C5_X_L <= pix_x) and (pix_x <= C5_X_R) and (C5_Y_T <= pix_y) and (pix_y <= C5_Y_B) else '0';
+   C4_on <= '1' when (C4_X_L <= pix_x) and (pix_x <= C4_X_R) and (C4_Y_T <= pix_y) and (pix_y <= C4_Y_B) else '0';
+   C3_on <= '1' when (C3_X_L <= pix_x) and (pix_x <= C3_X_R) and (C3_Y_T <= pix_y) and (pix_y <= C3_Y_B) else '0';
+   C2_on <= '1' when (C2_X_L <= pix_x) and (pix_x <= C2_X_R) and (C2_Y_T <= pix_y) and (pix_y <= C2_Y_B) else '0';
+   C1_on <= '1' when (C1_X_L <= pix_x) and (pix_x <= C1_X_R) and (C1_Y_T <= pix_y) and (pix_y <= C1_Y_B) else '0';
+   
+   D8_on <= '1' when (D8_X_L <= pix_x) and (pix_x <= D8_X_R) and (D8_Y_T <= pix_y) and (pix_y <= D8_Y_B) else '0';
+   D7_on <= '1' when (D7_X_L <= pix_x) and (pix_x <= D7_X_R) and (D7_Y_T <= pix_y) and (pix_y <= D7_Y_B) else '0';
+   D6_on <= '1' when (D6_X_L <= pix_x) and (pix_x <= D6_X_R) and (D6_Y_T <= pix_y) and (pix_y <= D6_Y_B) else '0';
+   D5_on <= '1' when (D5_X_L <= pix_x) and (pix_x <= D5_X_R) and (D5_Y_T <= pix_y) and (pix_y <= D5_Y_B) else '0';
+   D4_on <= '1' when (D4_X_L <= pix_x) and (pix_x <= D4_X_R) and (D4_Y_T <= pix_y) and (pix_y <= D4_Y_B) else '0';
+   D3_on <= '1' when (D3_X_L <= pix_x) and (pix_x <= D3_X_R) and (D3_Y_T <= pix_y) and (pix_y <= D3_Y_B) else '0';
+   D2_on <= '1' when (D2_X_L <= pix_x) and (pix_x <= D2_X_R) and (D2_Y_T <= pix_y) and (pix_y <= D2_Y_B) else '0';
+   D1_on <= '1' when (D1_X_L <= pix_x) and (pix_x <= D1_X_R) and (D1_Y_T <= pix_y) and (pix_y <= D1_Y_B) else '0';
+   
+   E8_on <= '1' when (E8_X_L <= pix_x) and (pix_x <= E8_X_R) and (E8_Y_T <= pix_y) and (pix_y <= E8_Y_B) else '0';
+   E7_on <= '1' when (E7_X_L <= pix_x) and (pix_x <= E7_X_R) and (E7_Y_T <= pix_y) and (pix_y <= E7_Y_B) else '0';
+   E6_on <= '1' when (E6_X_L <= pix_x) and (pix_x <= E6_X_R) and (E6_Y_T <= pix_y) and (pix_y <= E6_Y_B) else '0';
+   E5_on <= '1' when (E5_X_L <= pix_x) and (pix_x <= E5_X_R) and (E5_Y_T <= pix_y) and (pix_y <= E5_Y_B) else '0';
+   E4_on <= '1' when (E4_X_L <= pix_x) and (pix_x <= E4_X_R) and (E4_Y_T <= pix_y) and (pix_y <= E4_Y_B) else '0';
+   E3_on <= '1' when (E3_X_L <= pix_x) and (pix_x <= E3_X_R) and (E3_Y_T <= pix_y) and (pix_y <= E3_Y_B) else '0';
+   E2_on <= '1' when (E2_X_L <= pix_x) and (pix_x <= E2_X_R) and (E2_Y_T <= pix_y) and (pix_y <= E2_Y_B) else '0';
+   E1_on <= '1' when (E1_X_L <= pix_x) and (pix_x <= E1_X_R) and (E1_Y_T <= pix_y) and (pix_y <= E1_Y_B) else '0';
+   
+   F8_on <= '1' when (F8_X_L <= pix_x) and (pix_x <= F8_X_R) and (F8_Y_T <= pix_y) and (pix_y <= F8_Y_B) else '0';
+   F7_on <= '1' when (F7_X_L <= pix_x) and (pix_x <= F7_X_R) and (F7_Y_T <= pix_y) and (pix_y <= F7_Y_B) else '0';
+   F6_on <= '1' when (F6_X_L <= pix_x) and (pix_x <= F6_X_R) and (F6_Y_T <= pix_y) and (pix_y <= F6_Y_B) else '0';
+   F5_on <= '1' when (F5_X_L <= pix_x) and (pix_x <= F5_X_R) and (F5_Y_T <= pix_y) and (pix_y <= F5_Y_B) else '0';
+   F4_on <= '1' when (F4_X_L <= pix_x) and (pix_x <= F4_X_R) and (F4_Y_T <= pix_y) and (pix_y <= F4_Y_B) else '0';
+   F3_on <= '1' when (F3_X_L <= pix_x) and (pix_x <= F3_X_R) and (F3_Y_T <= pix_y) and (pix_y <= F3_Y_B) else '0';
+   F2_on <= '1' when (F2_X_L <= pix_x) and (pix_x <= F2_X_R) and (F2_Y_T <= pix_y) and (pix_y <= F2_Y_B) else '0';
+   F1_on <= '1' when (F1_X_L <= pix_x) and (pix_x <= F1_X_R) and (F1_Y_T <= pix_y) and (pix_y <= F1_Y_B) else '0';
+   
+   G8_on <= '1' when (G8_X_L <= pix_x) and (pix_x <= G8_X_R) and (G8_Y_T <= pix_y) and (pix_y <= G8_Y_B) else '0';
+   G7_on <= '1' when (G7_X_L <= pix_x) and (pix_x <= G7_X_R) and (G7_Y_T <= pix_y) and (pix_y <= G7_Y_B) else '0';
+   G6_on <= '1' when (G6_X_L <= pix_x) and (pix_x <= G6_X_R) and (G6_Y_T <= pix_y) and (pix_y <= G6_Y_B) else '0';
+   G5_on <= '1' when (G5_X_L <= pix_x) and (pix_x <= G5_X_R) and (G5_Y_T <= pix_y) and (pix_y <= G5_Y_B) else '0';
+   G4_on <= '1' when (G4_X_L <= pix_x) and (pix_x <= G4_X_R) and (G4_Y_T <= pix_y) and (pix_y <= G4_Y_B) else '0';
+   G3_on <= '1' when (G3_X_L <= pix_x) and (pix_x <= G3_X_R) and (G3_Y_T <= pix_y) and (pix_y <= G3_Y_B) else '0';
+   G2_on <= '1' when (G2_X_L <= pix_x) and (pix_x <= G2_X_R) and (G2_Y_T <= pix_y) and (pix_y <= G2_Y_B) else '0';
+   G1_on <= '1' when (G1_X_L <= pix_x) and (pix_x <= G1_X_R) and (G1_Y_T <= pix_y) and (pix_y <= G1_Y_B) else '0';
+   
+   H8_on <= '1' when (H8_X_L <= pix_x) and (pix_x <= H8_X_R) and (H8_Y_T <= pix_y) and (pix_y <= H8_Y_B) else '0';
+   H7_on <= '1' when (H7_X_L <= pix_x) and (pix_x <= H7_X_R) and (H7_Y_T <= pix_y) and (pix_y <= H7_Y_B) else '0';
+   H6_on <= '1' when (H6_X_L <= pix_x) and (pix_x <= H6_X_R) and (H6_Y_T <= pix_y) and (pix_y <= H6_Y_B) else '0';
+   H5_on <= '1' when (H5_X_L <= pix_x) and (pix_x <= H5_X_R) and (H5_Y_T <= pix_y) and (pix_y <= H5_Y_B) else '0';
+   H4_on <= '1' when (H4_X_L <= pix_x) and (pix_x <= H4_X_R) and (H4_Y_T <= pix_y) and (pix_y <= H4_Y_B) else '0';
+   H3_on <= '1' when (H3_X_L <= pix_x) and (pix_x <= H3_X_R) and (H3_Y_T <= pix_y) and (pix_y <= H3_Y_B) else '0';
+   H2_on <= '1' when (H2_X_L <= pix_x) and (pix_x <= H2_X_R) and (H2_Y_T <= pix_y) and (pix_y <= H2_Y_B) else '0';
+   H1_on <= '1' when (H1_X_L <= pix_x) and (pix_x <= H1_X_R) and (H1_Y_T <= pix_y) and (pix_y <= H1_Y_B) else '0';
+   
+   wall_rgb <= "110"; -- blue
+
+-- ======================================================================================================
+
+   bar_y_t <= bar_y_reg;
+   bar_y_b <= bar_y_t + BAR_Y_SIZE - 1;
+   bar_on <= '1' when (BAR_X_L <= pix_x) and (pix_x <= BAR_X_R) and (bar_y_t <= pix_y) and (pix_y <= bar_y_b) else '0';
+   bar_rgb <= "011"; -- green
+
+-- ======================================================================================================
+-- Process bar movement requests
+   process( bar_y_reg, bar_y_b, bar_y_t, refr_tick, btn)
+      begin
+      bar_y_next <= bar_y_reg; -- no move
+      if ( refr_tick = '1' ) then
+
+-- if btn 1 pressed and paddle not at bottom yet
+         if ( btn(1) = '1' and bar_y_b < (MAX_Y - 1 - BAR_V)) then
+            bar_y_next <= bar_y_reg + BAR_V; -- move down
+
+-- if btn 0 pressed and bar not at top yet
+         elsif ( btn(0) = '1' and bar_y_t > BAR_V) then
+            bar_y_next <= bar_y_reg - BAR_V; -- move up
+         end if;
+      end if;
+   end process;
+
+-- ======================================================================================================
+---- set coordinates of square ball.
+--    process(btn(0))
+--    begin
+--        if btn(0) = '0' then
+--            rom_temp <= BALL_ROM;
+--        elsif btn(0) = '1' then
+--            rom_temp <= blackbishopdarksquare;
+--        end if;
+--    end process;
+
+
+
+-- pixel within square ball
+   sq_ball_on <= '1' when (E1_x_l <= pix_x) and (pix_x <= E1_x_r) and (E1_y_t <= pix_y) and (pix_y <= E1_y_b) else '0';
+   ou_ball_on <= '1' when (E8_x_l <= pix_x) and (pix_x <= E8_x_r) and (E8_y_t <= pix_y) and (pix_y <= E8_y_b) else '0';
+   WtRook1 <= '1' when (a1_x_l <= pix_x) and (pix_x <= A1_x_r) and (A1_y_t <= pix_y) and (pix_y <= A1_y_b) else '0';
+
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_addr <= pix_y(5 downto 0) - E1_y_t;
+   rom_col <= pix_x(5 downto 0) - E1_x_l; -- ROM column
+   rom_data <= BALL_ROM(to_integer(rom_addr)); -- Get row data
+   rom_bit <= rom_data(to_integer(rom_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_adr <= pix_y(5 downto 0) - E8_y_t;
+   rom_coll <= pix_x(5 downto 0) - E8_x_l; -- ROM column
+   rom_datta <= BALL_ROM(to_integer(rom_addr)); -- Get row data
+   rom_bitt <= rom_data(to_integer(rom_coll));-- Get column bit
+   
+   -- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_wtrook1_addr <= pix_y(5 downto 0) - E1_y_t;
+   rom_wtrook1_col <= pix_x(5 downto 0) - E1_x_l; -- ROM column
+   rom_wtrook1_data <= BALL_ROM(to_integer(rom_wtrook1_addr)); -- Get row data
+   rom_wtrook1_bit <= rom_data(to_integer(rom_wtrook1_col));-- Get column bit
+   
+
+-- Turn ball on only if within square and the ROM bit is 1.
+   rd_ball_on_white <= '1' when (sq_ball_on = '1') and (rom_bit = '1') else '0';
+-- Turn ball on only if within square and the ROM bit is 1.
+   rd_ball_on_black <= '1' when (ou_ball_on = '1') and (rom_bitt = '1') else '0';
+   
+   
+   WtRook1_on <= '1' when (WtRook1 = '1') and (rom_wtrook1_bit = '1') else '0';
+   
+  
+
+
+   bal_rgb <= "111"; -- red
+   ball_rgb <= "000"; -- red
+
+-- ======================================================================================================
+-- turn on the appropriate color depending on the current pixel position.
+   process (video_on, wall_rgb, bar_rgb, wall_on, bar_on, rd_ball_on_black,rd_ball_on_white,bal_rgb, ball_rgb,WtRook1_on,
+    A8_on, A7_on, A6_on, A5_on, A4_on, A3_on, A2_on, A1_on,    
+    B8_on, B7_on, B6_on, B5_on, B4_on, B3_on, B2_on, B1_on,
+    C8_on, C7_on, C6_on, C5_on, C4_on, C3_on, C2_on, C1_on,
+    D8_on, D7_on, D6_on, D5_on, D4_on, D3_on, D2_on, D1_on,
+    E8_on, E7_on, E6_on, E5_on, E4_on, E3_on, E2_on, E1_on,
+    F8_on, F7_on, F6_on, F5_on, F4_on, F3_on, F2_on, F1_on,
+    G8_on, G7_on, G6_on, G5_on, G4_on, G3_on, G2_on, G1_on,
+    H8_on, H7_on, H6_on, H5_on, H4_on, H3_on, H2_on, H1_on)
+      begin
+      if (video_on = '0') then
+         graph_rgb <= "111"; -- blank
+      else 
+         if (rd_ball_on_black = '1') then
+            graph_rgb <= ball_rgb;
+         elsif (rd_ball_on_white = '1') then
+            graph_rgb <= bal_rgb;
+         elsif (WtRook1_on = '1') then
+            graph_rgb <= bal_rgb;
+         elsif(A8_on = '1') then
+            graph_rgb <= wall_rgb;
+         elsif (A7_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (A6_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (A5_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (A4_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (A3_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (A2_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (A1_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (B8_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (B7_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (B6_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (B5_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (B4_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (B3_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (B2_on = '1') then
+            graph_rgb <= bar_rgb; 
+         elsif (B1_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (C8_on = '1') then
+            graph_rgb <= wall_rgb;
+         elsif (C7_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (C6_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (C5_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (C4_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (C3_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (C2_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (C1_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (D8_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (D7_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (D6_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (D5_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (D4_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (D3_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (D2_on = '1') then
+            graph_rgb <= bar_rgb; 
+         elsif (D1_on = '1') then   
+            graph_rgb <= wall_rgb; 
+         elsif (E8_on = '1') then
+            graph_rgb <= wall_rgb;
+         elsif (E7_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (E6_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (E5_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (E4_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (E3_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (E2_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (E1_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (F8_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (F7_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (F6_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (F5_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (F4_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (F3_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (F2_on = '1') then
+            graph_rgb <= bar_rgb; 
+         elsif (F1_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (G8_on = '1') then
+            graph_rgb <= wall_rgb;
+         elsif (G7_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (G6_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (G5_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (G4_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (G3_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (G2_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (G1_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (H8_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (H7_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (H6_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (H5_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (H4_on = '1') then
+            graph_rgb <= bar_rgb;
+         elsif (H3_on = '1') then   
+            graph_rgb <= wall_rgb;
+         elsif (H2_on = '1') then
+            graph_rgb <= bar_rgb; 
+         elsif (H1_on = '1') then   
+            graph_rgb <= wall_rgb;
+
+        
+            
+            
+            
+            
+                                                   
+
+         else
+            graph_rgb <= "000"; -- yellow bkgnd
+         end if;
+      end if;
+   end process;
+
+end rtl;
+
+
