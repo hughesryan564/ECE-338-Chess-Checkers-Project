@@ -1,0 +1,2929 @@
+-- ======================================================================================================
+-- ======================================================================================================
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity pong_graph_st is
+   port(
+      clk, reset: in std_logic;
+      --btn: in std_logic_vector(1 downto 0);
+      video_on: in std_logic;
+      pixel_x, pixel_y: in std_logic_vector(9 downto 0);
+      graph_rgb: out std_logic_vector(2 downto 0);
+      boardState: in std_logic_vector(255 downto 0);
+      square: in std_logic_vector(5 downto 0)
+   );
+end pong_graph_st;
+
+-- ======================================================================================================
+-- ======================================================================================================
+
+architecture rtl of pong_graph_st is
+
+-- Signal used to control speed of ball and how often pushbuttons are checked for paddle movement.
+   signal refr_tick: std_logic;
+
+-- x, y coordinates (0,0 to (639, 479)
+   signal pix_x, pix_y: unsigned(9 downto 0);
+
+-- Screen dimensions
+   constant MAX_X: integer := 640;
+   constant MAX_Y: integer := 480;
+
+-- A8
+   constant A8_X_L: integer := 0;
+   constant A8_X_R: integer := 45;
+   constant A8_Y_T: integer := 60;
+   constant A8_Y_B: integer := 105;
+
+-- A7
+   constant A7_X_L: integer := 0;
+   constant A7_X_R: integer := 45;
+   constant A7_Y_T: integer := 106;
+   constant A7_Y_B: integer := 151;
+   
+-- A6
+   constant A6_X_L: integer := 0;
+   constant A6_X_R: integer := 45;
+   constant A6_Y_T: integer := 151;
+   constant A6_Y_B: integer := 196;
+   
+-- A5
+   constant A5_X_L: integer := 0;
+   constant A5_X_R: integer := 45;
+   constant A5_Y_T: integer := 197;
+   constant A5_Y_B: integer := 242;
+   
+-- A4
+   constant A4_X_L: integer := 0;
+   constant A4_X_R: integer := 45;
+   constant A4_Y_T: integer := 243;
+   constant A4_Y_B: integer := 288;
+   
+-- A3
+   constant A3_X_L: integer := 0;
+   constant A3_X_R: integer := 45;
+   constant A3_Y_T: integer := 289;
+   constant A3_Y_B: integer := 334;
+   
+-- A2
+   constant A2_X_L: integer := 0;
+   constant A2_X_R: integer := 45;
+   constant A2_Y_T: integer := 335;
+   constant A2_Y_B: integer := 380;
+   
+-- A1
+   constant A1_X_L: integer := 0;
+   constant A1_X_R: integer := 45;
+   constant A1_Y_T: integer := 381;
+   constant A1_Y_B: integer := 426;
+   
+-- ======================================================================================================
+--Col 2
+-- b8
+   constant B8_X_L: integer := 46;
+   constant B8_X_R: integer := 91;
+   constant B8_Y_T: integer := 60;
+   constant B8_Y_B: integer := 105;
+
+-- b7
+   constant B7_X_L: integer := 46;
+   constant B7_X_R: integer := 91;
+   constant B7_Y_T: integer := 106;
+   constant B7_Y_B: integer := 151;
+   
+-- b6
+   constant B6_X_L: integer := 46;
+   constant B6_X_R: integer := 91;
+   constant B6_Y_T: integer := 151;
+   constant B6_Y_B: integer := 196;
+   
+-- b5
+   constant B5_X_L: integer := 46;
+   constant B5_X_R: integer := 91;
+   constant B5_Y_T: integer := 197;
+   constant B5_Y_B: integer := 242;
+   
+-- b4
+   constant B4_X_L: integer := 46;
+   constant B4_X_R: integer := 91;
+   constant B4_Y_T: integer := 243;
+   constant B4_Y_B: integer := 288;
+   
+-- b3
+   constant B3_X_L: integer := 46;
+   constant B3_X_R: integer := 91;
+   constant B3_Y_T: integer := 289;
+   constant B3_Y_B: integer := 334;
+   
+-- b2
+   constant B2_X_L: integer := 46;
+   constant B2_X_R: integer := 91;
+   constant B2_Y_T: integer := 335;
+   constant B2_Y_B: integer := 380;
+   
+-- b1
+   constant B1_X_L: integer := 46;
+   constant B1_X_R: integer := 91;
+   constant B1_Y_T: integer := 381;
+   constant B1_Y_B: integer := 426;
+   
+-- ======================================================================================================
+--Col 3
+-- c8
+   constant C8_X_L: integer := 92;
+   constant C8_X_R: integer := 137;
+   constant C8_Y_T: integer := 60;
+   constant C8_Y_B: integer := 105;
+
+-- c7
+   constant C7_X_L: integer := 92;
+   constant C7_X_R: integer := 137;
+   constant C7_Y_T: integer := 106;
+   constant C7_Y_B: integer := 151;
+   
+-- b6
+   constant C6_X_L: integer := 92;
+   constant C6_X_R: integer := 137;
+   constant C6_Y_T: integer := 151;
+   constant C6_Y_B: integer := 196;
+   
+-- b5
+   constant C5_X_L: integer := 92;
+   constant C5_X_R: integer := 137;
+   constant C5_Y_T: integer := 197;
+   constant C5_Y_B: integer := 242;
+   
+-- b4
+   constant C4_X_L: integer := 92;
+   constant C4_X_R: integer := 137;
+   constant C4_Y_T: integer := 243;
+   constant C4_Y_B: integer := 288;
+   
+-- b3
+   constant C3_X_L: integer := 92;
+   constant C3_X_R: integer := 137;
+   constant C3_Y_T: integer := 289;
+   constant C3_Y_B: integer := 334;
+   
+-- b2
+   constant C2_X_L: integer := 92;
+   constant C2_X_R: integer := 137;
+   constant C2_Y_T: integer := 335;
+   constant C2_Y_B: integer := 380;
+   
+-- b1
+   constant C1_X_L: integer := 92;
+   constant C1_X_R: integer := 137;
+   constant C1_Y_T: integer := 381;
+   constant C1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 4
+-- b8
+   constant D8_X_L: integer := 138;
+   constant D8_X_R: integer := 183;
+   constant D8_Y_T: integer := 60;
+   constant D8_Y_B: integer := 105;
+
+-- b7
+   constant D7_X_L: integer := 138;
+   constant D7_X_R: integer := 183;
+   constant D7_Y_T: integer := 106;
+   constant D7_Y_B: integer := 151;
+   
+-- b6
+   constant D6_X_L: integer := 138;
+   constant D6_X_R: integer := 183;
+   constant D6_Y_T: integer := 151;
+   constant D6_Y_B: integer := 196;
+   
+-- b5
+   constant D5_X_L: integer := 138;
+   constant D5_X_R: integer := 183;
+   constant D5_Y_T: integer := 197;
+   constant D5_Y_B: integer := 242;
+   
+-- b4
+   constant D4_X_L: integer := 138;
+   constant D4_X_R: integer := 183;
+   constant D4_Y_T: integer := 243;
+   constant D4_Y_B: integer := 288;
+   
+-- b3
+   constant D3_X_L: integer := 138;
+   constant D3_X_R: integer := 183;
+   constant D3_Y_T: integer := 289;
+   constant D3_Y_B: integer := 334;
+   
+-- b2
+   constant D2_X_L: integer := 138;
+   constant D2_X_R: integer := 183;
+   constant D2_Y_T: integer := 335;
+   constant D2_Y_B: integer := 380;
+   
+-- b1
+   constant D1_X_L: integer := 138;
+   constant D1_X_R: integer := 183;
+   constant D1_Y_T: integer := 381;
+   constant D1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 5
+-- b8
+   constant E8_X_L: integer := 184;
+   constant E8_X_R: integer := 229;
+   constant E8_Y_T: integer := 60;
+   constant E8_Y_B: integer := 105;
+
+-- b7
+   constant E7_X_L: integer := 184;
+   constant E7_X_R: integer := 229;
+   constant E7_Y_T: integer := 106;
+   constant E7_Y_B: integer := 151;
+   
+-- b6
+   constant E6_X_L: integer := 184;
+   constant E6_X_R: integer := 229;
+   constant E6_Y_T: integer := 151;
+   constant E6_Y_B: integer := 196;
+   
+-- b5
+   constant E5_X_L: integer := 184;
+   constant E5_X_R: integer := 229;
+   constant E5_Y_T: integer := 197;
+   constant E5_Y_B: integer := 242;
+   
+-- b4
+   constant E4_X_L: integer := 184;
+   constant E4_X_R: integer := 229;
+   constant E4_Y_T: integer := 243;
+   constant E4_Y_B: integer := 288;
+   
+-- b3
+   constant E3_X_L: integer := 184;
+   constant E3_X_R: integer := 229;
+   constant E3_Y_T: integer := 289;
+   constant E3_Y_B: integer := 334;
+   
+-- b2
+   constant E2_X_L: integer := 184;
+   constant E2_X_R: integer := 229;
+   constant E2_Y_T: integer := 335;
+   constant E2_Y_B: integer := 380;
+   
+-- b1
+   constant E1_X_L: integer := 184;
+   constant E1_X_R: integer := 229;
+   constant E1_Y_T: integer := 381;
+   constant E1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 6
+-- b8
+   constant F8_X_L: integer := 230;
+   constant F8_X_R: integer := 275;
+   constant F8_Y_T: integer := 60;
+   constant F8_Y_B: integer := 105;
+
+-- b7
+   constant F7_X_L: integer := 230;
+   constant F7_X_R: integer := 275;
+   constant F7_Y_T: integer := 106;
+   constant F7_Y_B: integer := 151;
+   
+-- b6
+   constant F6_X_L: integer := 230;
+   constant F6_X_R: integer := 275;
+   constant F6_Y_T: integer := 151;
+   constant F6_Y_B: integer := 196;
+   
+-- b5
+   constant F5_X_L: integer := 230;
+   constant F5_X_R: integer := 275;
+   constant F5_Y_T: integer := 197;
+   constant F5_Y_B: integer := 242;
+   
+-- b4
+   constant F4_X_L: integer := 230;
+   constant F4_X_R: integer := 275;
+   constant F4_Y_T: integer := 243;
+   constant F4_Y_B: integer := 288;
+   
+-- b3
+   constant F3_X_L: integer := 230;
+   constant F3_X_R: integer := 275;
+   constant F3_Y_T: integer := 289;
+   constant F3_Y_B: integer := 334;
+   
+-- b2
+   constant F2_X_L: integer := 230;
+   constant F2_X_R: integer := 275;
+   constant F2_Y_T: integer := 335;
+   constant F2_Y_B: integer := 380;
+   
+-- b1
+   constant F1_X_L: integer := 230;
+   constant F1_X_R: integer := 275;
+   constant F1_Y_T: integer := 381;
+   constant F1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 7
+-- b8
+   constant G8_X_L: integer := 276;
+   constant G8_X_R: integer := 321;
+   constant G8_Y_T: integer := 60;
+   constant G8_Y_B: integer := 105;
+
+-- b7
+   constant G7_X_L: integer := 276;
+   constant G7_X_R: integer := 321;
+   constant G7_Y_T: integer := 106;
+   constant G7_Y_B: integer := 151;
+   
+-- b6
+   constant G6_X_L: integer := 276;
+   constant G6_X_R: integer := 321;
+   constant G6_Y_T: integer := 151;
+   constant G6_Y_B: integer := 196;
+   
+-- b5
+   constant G5_X_L: integer := 276;
+   constant G5_X_R: integer := 321;
+   constant G5_Y_T: integer := 197;
+   constant G5_Y_B: integer := 242;
+   
+-- b4
+   constant G4_X_L: integer := 276;
+   constant G4_X_R: integer := 321;
+   constant G4_Y_T: integer := 243;
+   constant G4_Y_B: integer := 288;
+   
+-- b3
+   constant G3_X_L: integer := 276;
+   constant G3_X_R: integer := 321;
+   constant G3_Y_T: integer := 289;
+   constant G3_Y_B: integer := 334;
+   
+-- b2
+   constant G2_X_L: integer := 276;
+   constant G2_X_R: integer := 321;
+   constant G2_Y_T: integer := 335;
+   constant G2_Y_B: integer := 380;
+   
+-- b1
+   constant G1_X_L: integer := 276;
+   constant G1_X_R: integer := 321;
+   constant G1_Y_T: integer := 381;
+   constant G1_Y_B: integer := 426;
+-- ======================================================================================================
+-- ======================================================================================================
+--Col 8
+-- b8
+   constant H8_X_L: integer := 322;
+   constant H8_X_R: integer := 367;
+   constant H8_Y_T: integer := 60;
+   constant H8_Y_B: integer := 105;
+
+-- b7
+   constant H7_X_L: integer := 322;
+   constant H7_X_R: integer := 367;
+   constant H7_Y_T: integer := 106;
+   constant H7_Y_B: integer := 151;
+   
+-- b6
+   constant H6_X_L: integer := 322;
+   constant H6_X_R: integer := 367;
+   constant H6_Y_T: integer := 151;
+   constant H6_Y_B: integer := 196;
+   
+-- b5
+   constant H5_X_L: integer := 322;
+   constant H5_X_R: integer := 367;
+   constant H5_Y_T: integer := 197;
+   constant H5_Y_B: integer := 242;
+   
+-- b4
+   constant H4_X_L: integer := 322;
+   constant H4_X_R: integer := 367;
+   constant H4_Y_T: integer := 243;
+   constant H4_Y_B: integer := 288;
+   
+-- b3
+   constant H3_X_L: integer := 322;
+   constant H3_X_R: integer := 367;
+   constant H3_Y_T: integer := 289;
+   constant H3_Y_B: integer := 334;
+   
+-- b2
+   constant H2_X_L: integer := 322;
+   constant H2_X_R: integer := 367;
+   constant H2_Y_T: integer := 335;
+   constant H2_Y_B: integer := 380;
+   
+-- b1
+   constant H1_X_L: integer := 322;
+   constant H1_X_R: integer := 367;
+   constant H1_Y_T: integer := 381;
+   constant H1_Y_B: integer := 426;
+-- ======================================================================================================
+
+   constant ball_x_l : integer := 322;
+   constant ball_x_r : integer := 367;
+   constant ball_y_t : integer := 381;
+   constant ball_y_b : integer := 426;
+   
+   constant bal_x_l : integer := 322;
+   constant bal_x_r : integer := 367;
+   constant bal_y_t : integer := 335;
+   constant bal_y_b : integer := 380;
+
+
+-- Paddle left, right, top, bottom and height -- left & right are constant. Top & bottom are signals to allow movement. bar_y_t driven by register below.
+   constant BAR_X_L: integer := 600;
+   constant BAR_X_R: integer := 603;
+   signal bar_y_t, bar_y_b: unsigned(9 downto 0);
+   constant BAR_Y_SIZE: integer := 72;
+
+
+-- Reg to track top boundary (x position is fixed)
+   signal bar_y_reg, bar_y_next: unsigned( 9 downto 0);
+   constant bar_x_reg: integer := 5;
+   constant bar_x_next: integer := 10;
+
+-- Bar moving velocity when a button is pressed -- the amount the bar is moved.
+   constant BAR_V: integer:= 4;
+
+-- Square ball -- ball left, right, top and bottom all vary. Left and top driven by registers below.
+   constant BALL_SIZE: integer := 8;
+
+
+
+-- Reg to track left and top boundary
+   signal ball_x_reg, ball_x_next: unsigned(44 downto 0);
+   signal ball_y_reg, ball_y_next: unsigned(44 downto 0);
+
+-- reg to track ball speed
+   signal x_delta_reg, x_delta_next: unsigned(9 downto 0);
+   signal y_delta_reg, y_delta_next: unsigned(9 downto 0);
+
+-- ball movement can be pos or neg
+   constant BALL_V_P: unsigned(9 downto 0):= to_unsigned(2,10);
+   constant BALL_V_N: unsigned(9 downto 0):= unsigned(to_signed(-2,10));
+
+-- round ball image
+   type rom_type is array(0 to 44) of std_logic_vector(0 to 44);
+
+
+   constant KING_ROM: rom_type:= (
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000111111111000000000000000000",
+"000000000000000000111111111000000000000000000",
+"000000000000000000111111111000000000000000000",
+"000000000111111000000111000000111111000000000",
+"000000000111111000000111000000111111000000000",
+"000000000111111000000111000000111111000000000",
+"000000111000000111000111000111000000111000000",
+"000000111000000111000111000111000000111000000",
+"000000111000000111000111000111000000111000000",
+"000111000000000000111111111000000000000111000",
+"000111000000000000111111111000000000000111000",
+"000111000000000000111111111000000000000111000",
+"000111000000111000000000000000111000000111000",
+"000111000000111000000000000000111000000111000",
+"000111000000111000000000000000111000000111000",
+"000000111000000111000000000111000001111000000",
+"000000111000000111000000000111000001111000000",
+"000000111000000111000000000111000001111000000",
+"000000000111000000000000000000000111000000000",
+"000000000111000000000000000000000111000000000",
+"000000000111000000000000000000000111000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000111111111111111111111111111000000000",
+"000000000111111111111111111111111111000000000",
+"000000000111111111111111111111111111000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000");
+
+
+   constant QUEEN_ROM: rom_type:= (
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000111000000111000111000000111000000000",
+"000000000111000000111000111000000111000000000",
+"000000000111000000111000111000000111000000000",
+"000000111000111000111000111000111000111000000",
+"000000111000111000111000111000111000111000000",
+"000000111000111000111000111000111000111000000",
+"000111000111000111111000111111000111000111000",
+"000111000111000111111000111111000111000111000",
+"000111000111000111111000111111000111000111000",
+"000000111000111000111000111000111000111000000",
+"000000111000111000111000111000111000111000000",
+"000000111000111000111000111000111000111000000",
+"000000111000111000111000111000111000111000000",
+"000000111000111000111000111000111000111000000",
+"000000111000111000111000111000111000111000000",
+"000000000111000111111000111111000111000000000",
+"000000000111000111111000111111000111000000000",
+"000000000111000111111000111111000111000000000",
+"000000000111000111000000000111000111000000000",
+"000000000111000111000000000111000111000000000",
+"000000000111000111000000000111000111000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000111111111111111111111111111000000000",
+"000000000111111111111111111111111111000000000",
+"000000000111111111111111111111111111000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000");
+
+   constant ROOK_ROM: rom_type:= (
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000111111111000111111111000111111111000000",
+"000000111111111000111111111000111111111000000",
+"000000111111111000111111111000111111111000000",
+"000000111000111111111000111111111000111000000",
+"000000111000111111111000111111111000111000000",
+"000000111000111111111000111111111000111000000",
+"000000111000000000000000000000000000111000000",
+"000000111000000000000000000000000000111000000",
+"000000111000000000000000000000000000111000000",
+"000000111111000000000000000000000111111000000",
+"000000111111000000000000000000000111111000000",
+"000000111111000000000000000000000111111000000",
+"000000000111111000111000111000111111000000000",
+"000000000111111000111000111000111111000000000",
+"000000000111111000111000111000111111000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000111111000000000000000111111000000000",
+"000000000111111000000000000000111111000000000",
+"000000000111111000000000000000111111000000000",
+"000000000111000000000000000000000111000000000",
+"000000000111000000000000000000000111000000000",
+"000000000111000000000000000000000111000000000",
+"000000000111111111111111111111111111000000000",
+"000000000111111111111111111111111111000000000",
+"000000000111111111111111111111111111000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000");
+
+   constant KNIGHT_ROM: rom_type:= (
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000111111111000000000000000",
+"000000000000000000000111111111000000000000000",
+"000000000000000000000111111111000000000000000",
+"000000000000000000111000000000111000000000000",
+"000000000000000000111000000000111000000000000",
+"000000000000000000111000000000111000000000000",
+"000000000000000111000000000000000111000000000",
+"000000000000000111000000000000000111000000000",
+"000000000000000111000000000000000111000000000",
+"000000000000111000000000000111000000111000000",
+"000000000000111000000000000111000000111000000",
+"000000000000111000000000000111000000111000000",
+"000000000111000000000111000000000000111000000",
+"000000000111000000000111000000000000111000000",
+"000000000111000000000111000000000000111000000",
+"000000000111000000111000111000000000111000000",
+"000000000111000000111000111000000000111000000",
+"000000000111000000111000111000000000111000000",
+"000000000000111111000111000000000111000000000",
+"000000000000111111000111000000000111000000000",
+"000000000000111111000111000000000111000000000",
+"000000000000000000000111000000000111000000000",
+"000000000000000000000111000000000111000000000",
+"000000000000000000000111000000000111000000000",
+"000000000000000000111000000000000111000000000",
+"000000000000000000111000000000000111000000000",
+"000000000000000000111000000000000111000000000",
+"000000000000000111000000000000000000111000000",
+"000000000000000111000000000000000000111000000",
+"000000000000000111000000000000000000111000000",
+"000000000000111111111111111111111111111000000",
+"000000000000111111111111111111111111111000000",
+"000000000000111111111111111111111111111000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000");
+
+   constant BISH_ROM: rom_type:= (
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000000111000000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000111000000111111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000111000000111000000111000000000000",
+"000000000000111000000111000000111000000000000",
+"000000000000111000000111000000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000111000111000111000000000000",
+"000000000000111000000111000000111000000000000",
+"000000000000111000000111000000111000000000000",
+"000000000000111000000111000000111000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111000000000000000111000000000000",
+"000000000000111111111111111111111000000000000",
+"000000000000111111111111111111111000000000000",
+"000000000000111111111111111111111000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000");
+
+   constant PAWN_ROM: rom_type:= (
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000111111111000000000000000000",
+"000000000000000000111111111000000000000000000",
+"000000000000000000111111111000000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111111000111111000000000000000",
+"000000000000000111111000111111000000000000000",
+"000000000000000111111000111111000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000000111000111000000000000000000",
+"000000000000000111111000111111000000000000000",
+"000000000000000111111000111111000000000000000",
+"000000000000000111111000111111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111000000000111000000000000000",
+"000000000000000111111111111111000000000000000",
+"000000000000000111111111111111000000000000000",
+"000000000000000111111111111111000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000");
+
+   constant BLANK_ROM: rom_type:= (
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000",
+"000000000000000000000000000000000000000000000");
+
+
+
+
+
+   signal rom_A1_white_addr, rom_A1_white_col: unsigned(5 downto 0);
+   signal rom_A1_white_data: std_logic_vector(44 downto 0);
+   signal rom_A1_white_bit: std_logic;
+   
+   signal rom_A2_white_addr, rom_A2_white_col: unsigned(5 downto 0);
+   signal rom_A2_white_data: std_logic_vector(44 downto 0);
+   signal rom_A2_white_bit: std_logic;
+   
+   signal rom_A3_white_addr, rom_A3_white_col: unsigned(5 downto 0);
+   signal rom_A3_white_data: std_logic_vector(44 downto 0);
+   signal rom_A3_white_bit: std_logic;
+   
+   signal rom_A4_white_addr, rom_A4_white_col: unsigned(5 downto 0);
+   signal rom_A4_white_data: std_logic_vector(44 downto 0);
+   signal rom_A4_white_bit: std_logic;
+   
+   signal rom_A5_white_addr, rom_A5_white_col: unsigned(5 downto 0);
+   signal rom_A5_white_data: std_logic_vector(44 downto 0);
+   signal rom_A5_white_bit: std_logic;
+
+   signal rom_A6_white_addr, rom_A6_white_col: unsigned(5 downto 0);
+   signal rom_A6_white_data: std_logic_vector(44 downto 0);
+   signal rom_A6_white_bit: std_logic;
+   
+   signal rom_A7_white_addr, rom_A7_white_col: unsigned(5 downto 0);
+   signal rom_A7_white_data: std_logic_vector(44 downto 0);
+   signal rom_A7_white_bit: std_logic; 
+   
+   signal rom_A8_white_addr, rom_A8_white_col: unsigned(5 downto 0);
+   signal rom_A8_white_data: std_logic_vector(44 downto 0);
+   signal rom_A8_white_bit: std_logic;     
+
+   signal rom_B1_white_addr, rom_B1_white_col: unsigned(5 downto 0);
+   signal rom_B1_white_data: std_logic_vector(44 downto 0);
+   signal rom_B1_white_bit: std_logic;
+   
+   signal rom_B2_white_addr, rom_B2_white_col: unsigned(5 downto 0);
+   signal rom_B2_white_data: std_logic_vector(44 downto 0);
+   signal rom_B2_white_bit: std_logic;
+   
+   signal rom_B3_white_addr, rom_B3_white_col: unsigned(5 downto 0);
+   signal rom_B3_white_data: std_logic_vector(44 downto 0);
+   signal rom_B3_white_bit: std_logic;
+   
+   signal rom_B4_white_addr, rom_B4_white_col: unsigned(5 downto 0);
+   signal rom_B4_white_data: std_logic_vector(44 downto 0);
+   signal rom_B4_white_bit: std_logic;
+   
+   signal rom_B5_white_addr, rom_B5_white_col: unsigned(5 downto 0);
+   signal rom_B5_white_data: std_logic_vector(44 downto 0);
+   signal rom_B5_white_bit: std_logic;
+
+   signal rom_B6_white_addr, rom_B6_white_col: unsigned(5 downto 0);
+   signal rom_B6_white_data: std_logic_vector(44 downto 0);
+   signal rom_B6_white_bit: std_logic;
+   
+   signal rom_B7_white_addr, rom_B7_white_col: unsigned(5 downto 0);
+   signal rom_B7_white_data: std_logic_vector(44 downto 0);
+   signal rom_B7_white_bit: std_logic; 
+   
+   signal rom_B8_white_addr, rom_B8_white_col: unsigned(5 downto 0);
+   signal rom_B8_white_data: std_logic_vector(44 downto 0);
+   signal rom_B8_white_bit: std_logic;   
+   
+   signal rom_C1_white_addr, rom_C1_white_col: unsigned(5 downto 0);
+   signal rom_C1_white_data: std_logic_vector(44 downto 0);
+   signal rom_C1_white_bit: std_logic;
+   
+   signal rom_C2_white_addr, rom_C2_white_col: unsigned(5 downto 0);
+   signal rom_C2_white_data: std_logic_vector(44 downto 0);
+   signal rom_C2_white_bit: std_logic;
+   
+   signal rom_C3_white_addr, rom_C3_white_col: unsigned(5 downto 0);
+   signal rom_C3_white_data: std_logic_vector(44 downto 0);
+   signal rom_C3_white_bit: std_logic;
+   
+   signal rom_C4_white_addr, rom_C4_white_col: unsigned(5 downto 0);
+   signal rom_C4_white_data: std_logic_vector(44 downto 0);
+   signal rom_C4_white_bit: std_logic;
+   
+   signal rom_C5_white_addr, rom_C5_white_col: unsigned(5 downto 0);
+   signal rom_C5_white_data: std_logic_vector(44 downto 0);
+   signal rom_C5_white_bit: std_logic;
+
+   signal rom_C6_white_addr, rom_C6_white_col: unsigned(5 downto 0);
+   signal rom_C6_white_data: std_logic_vector(44 downto 0);
+   signal rom_C6_white_bit: std_logic;
+   
+   signal rom_C7_white_addr, rom_C7_white_col: unsigned(5 downto 0);
+   signal rom_C7_white_data: std_logic_vector(44 downto 0);
+   signal rom_C7_white_bit: std_logic; 
+   
+   signal rom_C8_white_addr, rom_C8_white_col: unsigned(5 downto 0);
+   signal rom_C8_white_data: std_logic_vector(44 downto 0);
+   signal rom_C8_white_bit: std_logic;   
+
+   signal rom_D1_white_addr, rom_D1_white_col: unsigned(5 downto 0);
+   signal rom_D1_white_data: std_logic_vector(44 downto 0);
+   signal rom_D1_white_bit: std_logic;
+   
+   signal rom_D2_white_addr, rom_D2_white_col: unsigned(5 downto 0);
+   signal rom_D2_white_data: std_logic_vector(44 downto 0);
+   signal rom_D2_white_bit: std_logic;
+   
+   signal rom_D3_white_addr, rom_D3_white_col: unsigned(5 downto 0);
+   signal rom_D3_white_data: std_logic_vector(44 downto 0);
+   signal rom_D3_white_bit: std_logic;
+   
+   signal rom_D4_white_addr, rom_D4_white_col: unsigned(5 downto 0);
+   signal rom_D4_white_data: std_logic_vector(44 downto 0);
+   signal rom_D4_white_bit: std_logic;
+   
+   signal rom_D5_white_addr, rom_D5_white_col: unsigned(5 downto 0);
+   signal rom_D5_white_data: std_logic_vector(44 downto 0);
+   signal rom_D5_white_bit: std_logic;
+
+   signal rom_D6_white_addr, rom_D6_white_col: unsigned(5 downto 0);
+   signal rom_D6_white_data: std_logic_vector(44 downto 0);
+   signal rom_D6_white_bit: std_logic;
+   
+   signal rom_D7_white_addr, rom_D7_white_col: unsigned(5 downto 0);
+   signal rom_D7_white_data: std_logic_vector(44 downto 0);
+   signal rom_D7_white_bit: std_logic; 
+   
+   signal rom_D8_white_addr, rom_D8_white_col: unsigned(5 downto 0);
+   signal rom_D8_white_data: std_logic_vector(44 downto 0);
+   signal rom_D8_white_bit: std_logic;   
+
+   signal rom_E1_white_addr, rom_E1_white_col: unsigned(5 downto 0);
+   signal rom_E1_white_data: std_logic_vector(44 downto 0);
+   signal rom_E1_white_bit: std_logic;
+   
+   signal rom_E2_white_addr, rom_E2_white_col: unsigned(5 downto 0);
+   signal rom_E2_white_data: std_logic_vector(44 downto 0);
+   signal rom_E2_white_bit: std_logic;
+   
+   signal rom_E3_white_addr, rom_E3_white_col: unsigned(5 downto 0);
+   signal rom_E3_white_data: std_logic_vector(44 downto 0);
+   signal rom_E3_white_bit: std_logic;
+   
+   signal rom_E4_white_addr, rom_E4_white_col: unsigned(5 downto 0);
+   signal rom_E4_white_data: std_logic_vector(44 downto 0);
+   signal rom_E4_white_bit: std_logic;
+   
+   signal rom_E5_white_addr, rom_E5_white_col: unsigned(5 downto 0);
+   signal rom_E5_white_data: std_logic_vector(44 downto 0);
+   signal rom_E5_white_bit: std_logic;
+
+   signal rom_E6_white_addr, rom_E6_white_col: unsigned(5 downto 0);
+   signal rom_E6_white_data: std_logic_vector(44 downto 0);
+   signal rom_E6_white_bit: std_logic;
+   
+   signal rom_E7_white_addr, rom_E7_white_col: unsigned(5 downto 0);
+   signal rom_E7_white_data: std_logic_vector(44 downto 0);
+   signal rom_E7_white_bit: std_logic; 
+   
+   signal rom_E8_white_addr, rom_E8_white_col: unsigned(5 downto 0);
+   signal rom_E8_white_data: std_logic_vector(44 downto 0);
+   signal rom_E8_white_bit: std_logic;   
+
+   signal rom_F1_white_addr, rom_F1_white_col: unsigned(5 downto 0);
+   signal rom_F1_white_data: std_logic_vector(44 downto 0);
+   signal rom_F1_white_bit: std_logic;
+   
+   signal rom_F2_white_addr, rom_F2_white_col: unsigned(5 downto 0);
+   signal rom_F2_white_data: std_logic_vector(44 downto 0);
+   signal rom_F2_white_bit: std_logic;
+   
+   signal rom_F3_white_addr, rom_F3_white_col: unsigned(5 downto 0);
+   signal rom_F3_white_data: std_logic_vector(44 downto 0);
+   signal rom_F3_white_bit: std_logic;
+   
+   signal rom_F4_white_addr, rom_F4_white_col: unsigned(5 downto 0);
+   signal rom_F4_white_data: std_logic_vector(44 downto 0);
+   signal rom_F4_white_bit: std_logic;
+   
+   signal rom_F5_white_addr, rom_F5_white_col: unsigned(5 downto 0);
+   signal rom_F5_white_data: std_logic_vector(44 downto 0);
+   signal rom_F5_white_bit: std_logic;
+
+   signal rom_F6_white_addr, rom_F6_white_col: unsigned(5 downto 0);
+   signal rom_F6_white_data: std_logic_vector(44 downto 0);
+   signal rom_F6_white_bit: std_logic;
+   
+   signal rom_F7_white_addr, rom_F7_white_col: unsigned(5 downto 0);
+   signal rom_F7_white_data: std_logic_vector(44 downto 0);
+   signal rom_F7_white_bit: std_logic; 
+   
+   signal rom_F8_white_addr, rom_F8_white_col: unsigned(5 downto 0);
+   signal rom_F8_white_data: std_logic_vector(44 downto 0);
+   signal rom_F8_white_bit: std_logic;   
+
+   signal rom_G1_white_addr, rom_G1_white_col: unsigned(5 downto 0);
+   signal rom_G1_white_data: std_logic_vector(44 downto 0);
+   signal rom_G1_white_bit: std_logic;
+   
+   signal rom_G2_white_addr, rom_G2_white_col: unsigned(5 downto 0);
+   signal rom_G2_white_data: std_logic_vector(44 downto 0);
+   signal rom_G2_white_bit: std_logic;
+   
+   signal rom_G3_white_addr, rom_G3_white_col: unsigned(5 downto 0);
+   signal rom_G3_white_data: std_logic_vector(44 downto 0);
+   signal rom_G3_white_bit: std_logic;
+   
+   signal rom_G4_white_addr, rom_G4_white_col: unsigned(5 downto 0);
+   signal rom_G4_white_data: std_logic_vector(44 downto 0);
+   signal rom_G4_white_bit: std_logic;
+   
+   signal rom_G5_white_addr, rom_G5_white_col: unsigned(5 downto 0);
+   signal rom_G5_white_data: std_logic_vector(44 downto 0);
+   signal rom_G5_white_bit: std_logic;
+
+   signal rom_G6_white_addr, rom_G6_white_col: unsigned(5 downto 0);
+   signal rom_G6_white_data: std_logic_vector(44 downto 0);
+   signal rom_G6_white_bit: std_logic;
+   
+   signal rom_G7_white_addr, rom_G7_white_col: unsigned(5 downto 0);
+   signal rom_G7_white_data: std_logic_vector(44 downto 0);
+   signal rom_G7_white_bit: std_logic; 
+   
+   signal rom_G8_white_addr, rom_G8_white_col: unsigned(5 downto 0);
+   signal rom_G8_white_data: std_logic_vector(44 downto 0);
+   signal rom_G8_white_bit: std_logic;   
+
+   signal rom_H1_white_addr, rom_H1_white_col: unsigned(5 downto 0);
+   signal rom_H1_white_data: std_logic_vector(44 downto 0);
+   signal rom_H1_white_bit: std_logic;
+   
+   signal rom_H2_white_addr, rom_H2_white_col: unsigned(5 downto 0);
+   signal rom_H2_white_data: std_logic_vector(44 downto 0);
+   signal rom_H2_white_bit: std_logic;
+   
+   signal rom_H3_white_addr, rom_H3_white_col: unsigned(5 downto 0);
+   signal rom_H3_white_data: std_logic_vector(44 downto 0);
+   signal rom_H3_white_bit: std_logic;
+   
+   signal rom_H4_white_addr, rom_H4_white_col: unsigned(5 downto 0);
+   signal rom_H4_white_data: std_logic_vector(44 downto 0);
+   signal rom_H4_white_bit: std_logic;
+   
+   signal rom_H5_white_addr, rom_H5_white_col: unsigned(5 downto 0);
+   signal rom_H5_white_data: std_logic_vector(44 downto 0);
+   signal rom_H5_white_bit: std_logic;
+
+   signal rom_H6_white_addr, rom_H6_white_col: unsigned(5 downto 0);
+   signal rom_H6_white_data: std_logic_vector(44 downto 0);
+   signal rom_H6_white_bit: std_logic;
+   
+   signal rom_H7_white_addr, rom_H7_white_col: unsigned(5 downto 0);
+   signal rom_H7_white_data: std_logic_vector(44 downto 0);
+   signal rom_H7_white_bit: std_logic; 
+   
+   signal rom_H8_white_addr, rom_H8_white_col: unsigned(5 downto 0);
+   signal rom_H8_white_data: std_logic_vector(44 downto 0);
+   signal rom_H8_white_bit: std_logic;   
+   
+      signal rom_A1_black_addr, rom_A1_black_col: unsigned(5 downto 0);
+   signal rom_A1_black_data: std_logic_vector(44 downto 0);
+   signal rom_A1_black_bit: std_logic;
+   
+   signal rom_A2_black_addr, rom_A2_black_col: unsigned(5 downto 0);
+   signal rom_A2_black_data: std_logic_vector(44 downto 0);
+   signal rom_A2_black_bit: std_logic;
+   
+   signal rom_A3_black_addr, rom_A3_black_col: unsigned(5 downto 0);
+   signal rom_A3_black_data: std_logic_vector(44 downto 0);
+   signal rom_A3_black_bit: std_logic;
+   
+   signal rom_A4_black_addr, rom_A4_black_col: unsigned(5 downto 0);
+   signal rom_A4_black_data: std_logic_vector(44 downto 0);
+   signal rom_A4_black_bit: std_logic;
+   
+   signal rom_A5_black_addr, rom_A5_black_col: unsigned(5 downto 0);
+   signal rom_A5_black_data: std_logic_vector(44 downto 0);
+   signal rom_A5_black_bit: std_logic;
+
+   signal rom_A6_black_addr, rom_A6_black_col: unsigned(5 downto 0);
+   signal rom_A6_black_data: std_logic_vector(44 downto 0);
+   signal rom_A6_black_bit: std_logic;
+   
+   signal rom_A7_black_addr, rom_A7_black_col: unsigned(5 downto 0);
+   signal rom_A7_black_data: std_logic_vector(44 downto 0);
+   signal rom_A7_black_bit: std_logic; 
+   
+   signal rom_A8_black_addr, rom_A8_black_col: unsigned(5 downto 0);
+   signal rom_A8_black_data: std_logic_vector(44 downto 0);
+   signal rom_A8_black_bit: std_logic;     
+
+   signal rom_B1_black_addr, rom_B1_black_col: unsigned(5 downto 0);
+   signal rom_B1_black_data: std_logic_vector(44 downto 0);
+   signal rom_B1_black_bit: std_logic;
+   
+   signal rom_B2_black_addr, rom_B2_black_col: unsigned(5 downto 0);
+   signal rom_B2_black_data: std_logic_vector(44 downto 0);
+   signal rom_B2_black_bit: std_logic;
+   
+   signal rom_B3_black_addr, rom_B3_black_col: unsigned(5 downto 0);
+   signal rom_B3_black_data: std_logic_vector(44 downto 0);
+   signal rom_B3_black_bit: std_logic;
+   
+   signal rom_B4_black_addr, rom_B4_black_col: unsigned(5 downto 0);
+   signal rom_B4_black_data: std_logic_vector(44 downto 0);
+   signal rom_B4_black_bit: std_logic;
+   
+   signal rom_B5_black_addr, rom_B5_black_col: unsigned(5 downto 0);
+   signal rom_B5_black_data: std_logic_vector(44 downto 0);
+   signal rom_B5_black_bit: std_logic;
+
+   signal rom_B6_black_addr, rom_B6_black_col: unsigned(5 downto 0);
+   signal rom_B6_black_data: std_logic_vector(44 downto 0);
+   signal rom_B6_black_bit: std_logic;
+   
+   signal rom_B7_black_addr, rom_B7_black_col: unsigned(5 downto 0);
+   signal rom_B7_black_data: std_logic_vector(44 downto 0);
+   signal rom_B7_black_bit: std_logic; 
+   
+   signal rom_B8_black_addr, rom_B8_black_col: unsigned(5 downto 0);
+   signal rom_B8_black_data: std_logic_vector(44 downto 0);
+   signal rom_B8_black_bit: std_logic;   
+   
+   signal rom_C1_black_addr, rom_C1_black_col: unsigned(5 downto 0);
+   signal rom_C1_black_data: std_logic_vector(44 downto 0);
+   signal rom_C1_black_bit: std_logic;
+   
+   signal rom_C2_black_addr, rom_C2_black_col: unsigned(5 downto 0);
+   signal rom_C2_black_data: std_logic_vector(44 downto 0);
+   signal rom_C2_black_bit: std_logic;
+   
+   signal rom_C3_black_addr, rom_C3_black_col: unsigned(5 downto 0);
+   signal rom_C3_black_data: std_logic_vector(44 downto 0);
+   signal rom_C3_black_bit: std_logic;
+   
+   signal rom_C4_black_addr, rom_C4_black_col: unsigned(5 downto 0);
+   signal rom_C4_black_data: std_logic_vector(44 downto 0);
+   signal rom_C4_black_bit: std_logic;
+   
+   signal rom_C5_black_addr, rom_C5_black_col: unsigned(5 downto 0);
+   signal rom_C5_black_data: std_logic_vector(44 downto 0);
+   signal rom_C5_black_bit: std_logic;
+
+   signal rom_C6_black_addr, rom_C6_black_col: unsigned(5 downto 0);
+   signal rom_C6_black_data: std_logic_vector(44 downto 0);
+   signal rom_C6_black_bit: std_logic;
+   
+   signal rom_C7_black_addr, rom_C7_black_col: unsigned(5 downto 0);
+   signal rom_C7_black_data: std_logic_vector(44 downto 0);
+   signal rom_C7_black_bit: std_logic; 
+   
+   signal rom_C8_black_addr, rom_C8_black_col: unsigned(5 downto 0);
+   signal rom_C8_black_data: std_logic_vector(44 downto 0);
+   signal rom_C8_black_bit: std_logic;   
+
+   signal rom_D1_black_addr, rom_D1_black_col: unsigned(5 downto 0);
+   signal rom_D1_black_data: std_logic_vector(44 downto 0);
+   signal rom_D1_black_bit: std_logic;
+   
+   signal rom_D2_black_addr, rom_D2_black_col: unsigned(5 downto 0);
+   signal rom_D2_black_data: std_logic_vector(44 downto 0);
+   signal rom_D2_black_bit: std_logic;
+   
+   signal rom_D3_black_addr, rom_D3_black_col: unsigned(5 downto 0);
+   signal rom_D3_black_data: std_logic_vector(44 downto 0);
+   signal rom_D3_black_bit: std_logic;
+   
+   signal rom_D4_black_addr, rom_D4_black_col: unsigned(5 downto 0);
+   signal rom_D4_black_data: std_logic_vector(44 downto 0);
+   signal rom_D4_black_bit: std_logic;
+   
+   signal rom_D5_black_addr, rom_D5_black_col: unsigned(5 downto 0);
+   signal rom_D5_black_data: std_logic_vector(44 downto 0);
+   signal rom_D5_black_bit: std_logic;
+
+   signal rom_D6_black_addr, rom_D6_black_col: unsigned(5 downto 0);
+   signal rom_D6_black_data: std_logic_vector(44 downto 0);
+   signal rom_D6_black_bit: std_logic;
+   
+   signal rom_D7_black_addr, rom_D7_black_col: unsigned(5 downto 0);
+   signal rom_D7_black_data: std_logic_vector(44 downto 0);
+   signal rom_D7_black_bit: std_logic; 
+   
+   signal rom_D8_black_addr, rom_D8_black_col: unsigned(5 downto 0);
+   signal rom_D8_black_data: std_logic_vector(44 downto 0);
+   signal rom_D8_black_bit: std_logic;   
+
+   signal rom_E1_black_addr, rom_E1_black_col: unsigned(5 downto 0);
+   signal rom_E1_black_data: std_logic_vector(44 downto 0);
+   signal rom_E1_black_bit: std_logic;
+   
+   signal rom_E2_black_addr, rom_E2_black_col: unsigned(5 downto 0);
+   signal rom_E2_black_data: std_logic_vector(44 downto 0);
+   signal rom_E2_black_bit: std_logic;
+   
+   signal rom_E3_black_addr, rom_E3_black_col: unsigned(5 downto 0);
+   signal rom_E3_black_data: std_logic_vector(44 downto 0);
+   signal rom_E3_black_bit: std_logic;
+   
+   signal rom_E4_black_addr, rom_E4_black_col: unsigned(5 downto 0);
+   signal rom_E4_black_data: std_logic_vector(44 downto 0);
+   signal rom_E4_black_bit: std_logic;
+   
+   signal rom_E5_black_addr, rom_E5_black_col: unsigned(5 downto 0);
+   signal rom_E5_black_data: std_logic_vector(44 downto 0);
+   signal rom_E5_black_bit: std_logic;
+
+   signal rom_E6_black_addr, rom_E6_black_col: unsigned(5 downto 0);
+   signal rom_E6_black_data: std_logic_vector(44 downto 0);
+   signal rom_E6_black_bit: std_logic;
+   
+   signal rom_E7_black_addr, rom_E7_black_col: unsigned(5 downto 0);
+   signal rom_E7_black_data: std_logic_vector(44 downto 0);
+   signal rom_E7_black_bit: std_logic; 
+   
+   signal rom_E8_black_addr, rom_E8_black_col: unsigned(5 downto 0);
+   signal rom_E8_black_data: std_logic_vector(44 downto 0);
+   signal rom_E8_black_bit: std_logic;   
+
+   signal rom_F1_black_addr, rom_F1_black_col: unsigned(5 downto 0);
+   signal rom_F1_black_data: std_logic_vector(44 downto 0);
+   signal rom_F1_black_bit: std_logic;
+   
+   signal rom_F2_black_addr, rom_F2_black_col: unsigned(5 downto 0);
+   signal rom_F2_black_data: std_logic_vector(44 downto 0);
+   signal rom_F2_black_bit: std_logic;
+   
+   signal rom_F3_black_addr, rom_F3_black_col: unsigned(5 downto 0);
+   signal rom_F3_black_data: std_logic_vector(44 downto 0);
+   signal rom_F3_black_bit: std_logic;
+   
+   signal rom_F4_black_addr, rom_F4_black_col: unsigned(5 downto 0);
+   signal rom_F4_black_data: std_logic_vector(44 downto 0);
+   signal rom_F4_black_bit: std_logic;
+   
+   signal rom_F5_black_addr, rom_F5_black_col: unsigned(5 downto 0);
+   signal rom_F5_black_data: std_logic_vector(44 downto 0);
+   signal rom_F5_black_bit: std_logic;
+
+   signal rom_F6_black_addr, rom_F6_black_col: unsigned(5 downto 0);
+   signal rom_F6_black_data: std_logic_vector(44 downto 0);
+   signal rom_F6_black_bit: std_logic;
+   
+   signal rom_F7_black_addr, rom_F7_black_col: unsigned(5 downto 0);
+   signal rom_F7_black_data: std_logic_vector(44 downto 0);
+   signal rom_F7_black_bit: std_logic; 
+   
+   signal rom_F8_black_addr, rom_F8_black_col: unsigned(5 downto 0);
+   signal rom_F8_black_data: std_logic_vector(44 downto 0);
+   signal rom_F8_black_bit: std_logic;   
+
+   signal rom_G1_black_addr, rom_G1_black_col: unsigned(5 downto 0);
+   signal rom_G1_black_data: std_logic_vector(44 downto 0);
+   signal rom_G1_black_bit: std_logic;
+   
+   signal rom_G2_black_addr, rom_G2_black_col: unsigned(5 downto 0);
+   signal rom_G2_black_data: std_logic_vector(44 downto 0);
+   signal rom_G2_black_bit: std_logic;
+   
+   signal rom_G3_black_addr, rom_G3_black_col: unsigned(5 downto 0);
+   signal rom_G3_black_data: std_logic_vector(44 downto 0);
+   signal rom_G3_black_bit: std_logic;
+   
+   signal rom_G4_black_addr, rom_G4_black_col: unsigned(5 downto 0);
+   signal rom_G4_black_data: std_logic_vector(44 downto 0);
+   signal rom_G4_black_bit: std_logic;
+   
+   signal rom_G5_black_addr, rom_G5_black_col: unsigned(5 downto 0);
+   signal rom_G5_black_data: std_logic_vector(44 downto 0);
+   signal rom_G5_black_bit: std_logic;
+
+   signal rom_G6_black_addr, rom_G6_black_col: unsigned(5 downto 0);
+   signal rom_G6_black_data: std_logic_vector(44 downto 0);
+   signal rom_G6_black_bit: std_logic;
+   
+   signal rom_G7_black_addr, rom_G7_black_col: unsigned(5 downto 0);
+   signal rom_G7_black_data: std_logic_vector(44 downto 0);
+   signal rom_G7_black_bit: std_logic; 
+   
+   signal rom_G8_black_addr, rom_G8_black_col: unsigned(5 downto 0);
+   signal rom_G8_black_data: std_logic_vector(44 downto 0);
+   signal rom_G8_black_bit: std_logic;   
+
+   signal rom_H1_black_addr, rom_H1_black_col: unsigned(5 downto 0);
+   signal rom_H1_black_data: std_logic_vector(44 downto 0);
+   signal rom_H1_black_bit: std_logic;
+   
+   signal rom_H2_black_addr, rom_H2_black_col: unsigned(5 downto 0);
+   signal rom_H2_black_data: std_logic_vector(44 downto 0);
+   signal rom_H2_black_bit: std_logic;
+   
+   signal rom_H3_black_addr, rom_H3_black_col: unsigned(5 downto 0);
+   signal rom_H3_black_data: std_logic_vector(44 downto 0);
+   signal rom_H3_black_bit: std_logic;
+   
+   signal rom_H4_black_addr, rom_H4_black_col: unsigned(5 downto 0);
+   signal rom_H4_black_data: std_logic_vector(44 downto 0);
+   signal rom_H4_black_bit: std_logic;
+   
+   signal rom_H5_black_addr, rom_H5_black_col: unsigned(5 downto 0);
+   signal rom_H5_black_data: std_logic_vector(44 downto 0);
+   signal rom_H5_black_bit: std_logic;
+
+   signal rom_H6_black_addr, rom_H6_black_col: unsigned(5 downto 0);
+   signal rom_H6_black_data: std_logic_vector(44 downto 0);
+   signal rom_H6_black_bit: std_logic;
+   
+   signal rom_H7_black_addr, rom_H7_black_col: unsigned(5 downto 0);
+   signal rom_H7_black_data: std_logic_vector(44 downto 0);
+   signal rom_H7_black_bit: std_logic; 
+   
+   signal rom_H8_black_addr, rom_H8_black_col: unsigned(5 downto 0);
+   signal rom_H8_black_data: std_logic_vector(44 downto 0);
+   signal rom_H8_black_bit: std_logic;   
+   
+   
+-- object output signals -- new signal to indicate if scan coord is within ball
+   signal bar_on, sq_ball_on, rd_ball_on_black, wall_on, rd_ball_on_white, ou_ball_on, WtRook1, WtRook1_on : std_logic;
+   signal A8_on, A7_on, A6_on, A5_on, A4_on, A3_on, A2_on, A1_on  : std_logic;
+   signal B8_on, B7_on, B6_on, B5_on, B4_on, B3_on, B2_on, B1_on : std_logic;
+   signal C8_on, C7_on, C6_on, C5_on, C4_on, C3_on, C2_on, C1_on : std_logic;
+   signal D8_on, D7_on, D6_on, D5_on, D4_on, D3_on, D2_on, D1_on : std_logic;
+   signal E8_on, E7_on, E6_on, E5_on, E4_on, E3_on, E2_on, E1_on : std_logic;
+   signal F8_on, F7_on, F6_on, F5_on, F4_on, F3_on, F2_on, F1_on : std_logic;
+   signal G8_on, G7_on, G6_on, G5_on, G4_on, G3_on, G2_on, G1_on : std_logic;
+   signal H8_on, H7_on, H6_on, H5_on, H4_on, H3_on, H2_on, H1_on : std_logic;
+
+   signal A1_white_piece_on, A2_white_piece_on, A3_white_piece_on, A4_white_piece_on, A5_white_piece_on, A6_white_piece_on, A7_white_piece_on, A8_white_piece_on: std_logic;
+   signal B1_white_piece_on, B2_white_piece_on, B3_white_piece_on, B4_white_piece_on, B5_white_piece_on, B6_white_piece_on, B7_white_piece_on, B8_white_piece_on: std_logic;
+   signal C1_white_piece_on, C2_white_piece_on, C3_white_piece_on, C4_white_piece_on, C5_white_piece_on, C6_white_piece_on, C7_white_piece_on, C8_white_piece_on: std_logic;
+   signal D1_white_piece_on, D2_white_piece_on, D3_white_piece_on, D4_white_piece_on, D5_white_piece_on, D6_white_piece_on, D7_white_piece_on, D8_white_piece_on: std_logic;
+   signal E1_white_piece_on, E2_white_piece_on, E3_white_piece_on, E4_white_piece_on, E5_white_piece_on, E6_white_piece_on, E7_white_piece_on, E8_white_piece_on: std_logic;
+   signal F1_white_piece_on, F2_white_piece_on, F3_white_piece_on, F4_white_piece_on, F5_white_piece_on, F6_white_piece_on, F7_white_piece_on, F8_white_piece_on: std_logic;
+   signal G1_white_piece_on, G2_white_piece_on, G3_white_piece_on, G4_white_piece_on, G5_white_piece_on, G6_white_piece_on, G7_white_piece_on, G8_white_piece_on: std_logic;
+   signal H1_white_piece_on, H2_white_piece_on, H3_white_piece_on, H4_white_piece_on, H5_white_piece_on, H6_white_piece_on, H7_white_piece_on, H8_white_piece_on: std_logic;
+   
+   signal A1_black_piece_on, A2_black_piece_on, A3_black_piece_on, A4_black_piece_on, A5_black_piece_on, A6_black_piece_on, A7_black_piece_on, A8_black_piece_on: std_logic;
+   signal B1_black_piece_on, B2_black_piece_on, B3_black_piece_on, B4_black_piece_on, B5_black_piece_on, B6_black_piece_on, B7_black_piece_on, B8_black_piece_on: std_logic;
+   signal C1_black_piece_on, C2_black_piece_on, C3_black_piece_on, C4_black_piece_on, C5_black_piece_on, C6_black_piece_on, C7_black_piece_on, C8_black_piece_on: std_logic;
+   signal D1_black_piece_on, D2_black_piece_on, D3_black_piece_on, D4_black_piece_on, D5_black_piece_on, D6_black_piece_on, D7_black_piece_on, D8_black_piece_on: std_logic;
+   signal E1_black_piece_on, E2_black_piece_on, E3_black_piece_on, E4_black_piece_on, E5_black_piece_on, E6_black_piece_on, E7_black_piece_on, E8_black_piece_on: std_logic;
+   signal F1_black_piece_on, F2_black_piece_on, F3_black_piece_on, F4_black_piece_on, F5_black_piece_on, F6_black_piece_on, F7_black_piece_on, F8_black_piece_on: std_logic;
+   signal G1_black_piece_on, G2_black_piece_on, G3_black_piece_on, G4_black_piece_on, G5_black_piece_on, G6_black_piece_on, G7_black_piece_on, G8_black_piece_on: std_logic;
+   signal H1_black_piece_on, H2_black_piece_on, H3_black_piece_on, H4_black_piece_on, H5_black_piece_on, H6_black_piece_on, H7_black_piece_on, H8_black_piece_on: std_logic;
+      
+   signal dark_rgb, light_rgb, black_rgb,white_rgb, bar_rgb: std_logic_vector(2 downto 0);
+   
+   type chessboard is array (63 downto 0) of ROM_type;
+   signal board, board1: chessboard;
+   type chunked is array (63 downto 0) of std_logic_vector(3 downto 0);
+   signal coords: chunked;
+
+-- ======================================================================================================
+   begin
+
+-- ======================================================================================================
+    coords(0) <= boardstate(3 downto 0);
+    coords(1) <= boardstate(7 downto 4);
+    coords(2) <= boardstate(11 downto 8);
+    coords(3) <= boardstate(15 downto 12); 
+    coords(4) <= boardstate(19 downto 16);
+    coords(5) <= boardstate(23 downto 20);
+    coords(6) <= boardstate(27 downto 24);
+    coords(7) <= boardstate(31 downto 28);
+    coords(8) <= boardstate(35 downto 32);
+    coords(9) <= boardstate(39 downto 36);
+    coords(10) <= boardstate(43 downto 40);
+    coords(11) <= boardstate(47 downto 44);
+    coords(12) <= boardstate(51 downto 48);
+    coords(13) <= boardstate(55 downto 52);
+    coords(14) <= boardstate(59 downto 56);
+    coords(15) <= boardstate(63 downto 60);
+    coords(16) <= boardstate(67 downto 64);
+    coords(17) <= boardstate(71 downto 68);
+    coords(18) <= boardstate(75 downto 72);
+    coords(19) <= boardstate(79 downto 76);
+    coords(20) <= boardstate(83 downto 80);
+    coords(21) <= boardstate(87 downto 84);
+    coords(22) <= boardstate(91 downto 88);
+    coords(23) <= boardstate(95 downto 92);
+    coords(24) <= boardstate(99 downto 96);
+    coords(25) <= boardstate(103 downto 100);
+    coords(26) <= boardstate(107 downto 104);
+    coords(27) <= boardstate(111 downto 108);
+    coords(28) <= boardstate(115 downto 112);
+    coords(29) <= boardstate(119 downto 116);
+    coords(30) <= boardstate(123 downto 120);
+    coords(31) <= boardstate(127 downto 124);
+    coords(32) <= boardstate(131 downto 128);
+    coords(33) <= boardstate(135 downto 132);
+    coords(34) <= boardstate(139 downto 136);
+    coords(35) <= boardstate(143 downto 140);
+    coords(36) <= boardstate(147 downto 144);
+    coords(37) <= boardstate(151 downto 148);
+    coords(38) <= boardstate(155 downto 152);
+    coords(39) <= boardstate(159 downto 156);
+    coords(40) <= boardstate(163 downto 160);
+    coords(41) <= boardstate(167 downto 164);
+    coords(42) <= boardstate(171 downto 168);
+    coords(43) <= boardstate(175 downto 172);
+    coords(44) <= boardstate(179 downto 176);
+    coords(45) <= boardstate(183 downto 180);
+    coords(46) <= boardstate(187 downto 184);
+    coords(47) <= boardstate(191 downto 188);
+    coords(48) <= boardstate(195 downto 192);
+    coords(49) <= boardstate(199 downto 196);
+    coords(50) <= boardstate(203 downto 200);
+    coords(51) <= boardstate(207 downto 204);
+    coords(52) <= boardstate(211 downto 208);
+    coords(53) <= boardstate(215 downto 212);
+    coords(54) <= boardstate(219 downto 216);
+    coords(55) <= boardstate(223 downto 220);
+    coords(56) <= boardstate(227 downto 224);
+    coords(57) <= boardstate(231 downto 228);
+    coords(58) <= boardstate(235 downto 232);
+    coords(59) <= boardstate(239 downto 236);
+    coords(60) <= boardstate(243 downto 240);
+    coords(61) <= boardstate(247 downto 244);
+    coords(62) <= boardstate(251 downto 248);
+    coords(63) <= boardstate(255 downto 252);
+    set_pieces: for i in 0 to 63 generate
+        with coords(i) select
+            board(i) <= BLANK_ROM when "0000",
+                     pawn_rom when  "0001",
+                     knight_rom when "0010",
+                     bish_rom when "0011",
+                     rook_rom when "0100",
+                     queen_rom when "0101",
+                     king_rom when "0110",
+                     blank_rom when others;
+        with coords(i) select
+            board1(i) <= BLANK_ROM when "1000",
+                     pawn_rom when  "1001",
+                     knight_rom when "1010",
+                     bish_rom when "1011",
+                     rook_rom when "1100",
+                     queen_rom when "1101",
+                     king_rom when "1110",
+                     blank_rom when others;
+    end generate;
+
+   
+   pix_x <= unsigned(pixel_x);
+   pix_y <= unsigned(pixel_y);
+
+-- Refr_tick: 1-clock tick asserted at start of v_sync, e.g., when the screen is refreshed -- speed is 60 Hz
+   refr_tick <= '1' when (pix_y = 1) and (pix_x = 1) else '0';
+
+-- ======================================================================================================
+
+   A8_on <= '1' when (A8_X_L <= pix_x) and (pix_x <= A8_X_R) and (A8_Y_T <= pix_y) and (pix_y <= A8_Y_B) else '0';
+   A7_on <= '1' when (A7_X_L <= pix_x) and (pix_x <= A7_X_R) and (A7_Y_T <= pix_y) and (pix_y <= A7_Y_B) else '0';
+   A6_on <= '1' when (A6_X_L <= pix_x) and (pix_x <= A6_X_R) and (A6_Y_T <= pix_y) and (pix_y <= A6_Y_B) else '0';
+   A5_on <= '1' when (A5_X_L <= pix_x) and (pix_x <= A5_X_R) and (A5_Y_T <= pix_y) and (pix_y <= A5_Y_B) else '0';
+   A4_on <= '1' when (A4_X_L <= pix_x) and (pix_x <= A4_X_R) and (A4_Y_T <= pix_y) and (pix_y <= A4_Y_B) else '0';
+   A3_on <= '1' when (A3_X_L <= pix_x) and (pix_x <= A3_X_R) and (A3_Y_T <= pix_y) and (pix_y <= A3_Y_B) else '0';
+   A2_on <= '1' when (A2_X_L <= pix_x) and (pix_x <= A2_X_R) and (A2_Y_T <= pix_y) and (pix_y <= A2_Y_B) else '0';
+   A1_on <= '1' when (A1_X_L <= pix_x) and (pix_x <= A1_X_R) and (A1_Y_T <= pix_y) and (pix_y <= A1_Y_B) else '0';
+   
+   B8_on <= '1' when (B8_X_L <= pix_x) and (pix_x <= B8_X_R) and (B8_Y_T <= pix_y) and (pix_y <= B8_Y_B) else '0';
+   B7_on <= '1' when (B7_X_L <= pix_x) and (pix_x <= B7_X_R) and (B7_Y_T <= pix_y) and (pix_y <= B7_Y_B) else '0';
+   B6_on <= '1' when (B6_X_L <= pix_x) and (pix_x <= B6_X_R) and (B6_Y_T <= pix_y) and (pix_y <= B6_Y_B) else '0';
+   B5_on <= '1' when (B5_X_L <= pix_x) and (pix_x <= B5_X_R) and (B5_Y_T <= pix_y) and (pix_y <= B5_Y_B) else '0';
+   B4_on <= '1' when (B4_X_L <= pix_x) and (pix_x <= B4_X_R) and (B4_Y_T <= pix_y) and (pix_y <= B4_Y_B) else '0';
+   B3_on <= '1' when (B3_X_L <= pix_x) and (pix_x <= B3_X_R) and (B3_Y_T <= pix_y) and (pix_y <= B3_Y_B) else '0';
+   B2_on <= '1' when (B2_X_L <= pix_x) and (pix_x <= B2_X_R) and (B2_Y_T <= pix_y) and (pix_y <= B2_Y_B) else '0';
+   B1_on <= '1' when (B1_X_L <= pix_x) and (pix_x <= B1_X_R) and (B1_Y_T <= pix_y) and (pix_y <= B1_Y_B) else '0';
+   
+   C8_on <= '1' when (C8_X_L <= pix_x) and (pix_x <= C8_X_R) and (C8_Y_T <= pix_y) and (pix_y <= C8_Y_B) else '0';
+   C7_on <= '1' when (C7_X_L <= pix_x) and (pix_x <= C7_X_R) and (C7_Y_T <= pix_y) and (pix_y <= C7_Y_B) else '0';
+   C6_on <= '1' when (C6_X_L <= pix_x) and (pix_x <= C6_X_R) and (C6_Y_T <= pix_y) and (pix_y <= C6_Y_B) else '0';
+   C5_on <= '1' when (C5_X_L <= pix_x) and (pix_x <= C5_X_R) and (C5_Y_T <= pix_y) and (pix_y <= C5_Y_B) else '0';
+   C4_on <= '1' when (C4_X_L <= pix_x) and (pix_x <= C4_X_R) and (C4_Y_T <= pix_y) and (pix_y <= C4_Y_B) else '0';
+   C3_on <= '1' when (C3_X_L <= pix_x) and (pix_x <= C3_X_R) and (C3_Y_T <= pix_y) and (pix_y <= C3_Y_B) else '0';
+   C2_on <= '1' when (C2_X_L <= pix_x) and (pix_x <= C2_X_R) and (C2_Y_T <= pix_y) and (pix_y <= C2_Y_B) else '0';
+   C1_on <= '1' when (C1_X_L <= pix_x) and (pix_x <= C1_X_R) and (C1_Y_T <= pix_y) and (pix_y <= C1_Y_B) else '0';
+   
+   D8_on <= '1' when (D8_X_L <= pix_x) and (pix_x <= D8_X_R) and (D8_Y_T <= pix_y) and (pix_y <= D8_Y_B) else '0';
+   D7_on <= '1' when (D7_X_L <= pix_x) and (pix_x <= D7_X_R) and (D7_Y_T <= pix_y) and (pix_y <= D7_Y_B) else '0';
+   D6_on <= '1' when (D6_X_L <= pix_x) and (pix_x <= D6_X_R) and (D6_Y_T <= pix_y) and (pix_y <= D6_Y_B) else '0';
+   D5_on <= '1' when (D5_X_L <= pix_x) and (pix_x <= D5_X_R) and (D5_Y_T <= pix_y) and (pix_y <= D5_Y_B) else '0';
+   D4_on <= '1' when (D4_X_L <= pix_x) and (pix_x <= D4_X_R) and (D4_Y_T <= pix_y) and (pix_y <= D4_Y_B) else '0';
+   D3_on <= '1' when (D3_X_L <= pix_x) and (pix_x <= D3_X_R) and (D3_Y_T <= pix_y) and (pix_y <= D3_Y_B) else '0';
+   D2_on <= '1' when (D2_X_L <= pix_x) and (pix_x <= D2_X_R) and (D2_Y_T <= pix_y) and (pix_y <= D2_Y_B) else '0';
+   D1_on <= '1' when (D1_X_L <= pix_x) and (pix_x <= D1_X_R) and (D1_Y_T <= pix_y) and (pix_y <= D1_Y_B) else '0';
+   
+   E8_on <= '1' when (E8_X_L <= pix_x) and (pix_x <= E8_X_R) and (E8_Y_T <= pix_y) and (pix_y <= E8_Y_B) else '0';
+   E7_on <= '1' when (E7_X_L <= pix_x) and (pix_x <= E7_X_R) and (E7_Y_T <= pix_y) and (pix_y <= E7_Y_B) else '0';
+   E6_on <= '1' when (E6_X_L <= pix_x) and (pix_x <= E6_X_R) and (E6_Y_T <= pix_y) and (pix_y <= E6_Y_B) else '0';
+   E5_on <= '1' when (E5_X_L <= pix_x) and (pix_x <= E5_X_R) and (E5_Y_T <= pix_y) and (pix_y <= E5_Y_B) else '0';
+   E4_on <= '1' when (E4_X_L <= pix_x) and (pix_x <= E4_X_R) and (E4_Y_T <= pix_y) and (pix_y <= E4_Y_B) else '0';
+   E3_on <= '1' when (E3_X_L <= pix_x) and (pix_x <= E3_X_R) and (E3_Y_T <= pix_y) and (pix_y <= E3_Y_B) else '0';
+   E2_on <= '1' when (E2_X_L <= pix_x) and (pix_x <= E2_X_R) and (E2_Y_T <= pix_y) and (pix_y <= E2_Y_B) else '0';
+   E1_on <= '1' when (E1_X_L <= pix_x) and (pix_x <= E1_X_R) and (E1_Y_T <= pix_y) and (pix_y <= E1_Y_B) else '0';
+   
+   F8_on <= '1' when (F8_X_L <= pix_x) and (pix_x <= F8_X_R) and (F8_Y_T <= pix_y) and (pix_y <= F8_Y_B) else '0';
+   F7_on <= '1' when (F7_X_L <= pix_x) and (pix_x <= F7_X_R) and (F7_Y_T <= pix_y) and (pix_y <= F7_Y_B) else '0';
+   F6_on <= '1' when (F6_X_L <= pix_x) and (pix_x <= F6_X_R) and (F6_Y_T <= pix_y) and (pix_y <= F6_Y_B) else '0';
+   F5_on <= '1' when (F5_X_L <= pix_x) and (pix_x <= F5_X_R) and (F5_Y_T <= pix_y) and (pix_y <= F5_Y_B) else '0';
+   F4_on <= '1' when (F4_X_L <= pix_x) and (pix_x <= F4_X_R) and (F4_Y_T <= pix_y) and (pix_y <= F4_Y_B) else '0';
+   F3_on <= '1' when (F3_X_L <= pix_x) and (pix_x <= F3_X_R) and (F3_Y_T <= pix_y) and (pix_y <= F3_Y_B) else '0';
+   F2_on <= '1' when (F2_X_L <= pix_x) and (pix_x <= F2_X_R) and (F2_Y_T <= pix_y) and (pix_y <= F2_Y_B) else '0';
+   F1_on <= '1' when (F1_X_L <= pix_x) and (pix_x <= F1_X_R) and (F1_Y_T <= pix_y) and (pix_y <= F1_Y_B) else '0';
+   
+   G8_on <= '1' when (G8_X_L <= pix_x) and (pix_x <= G8_X_R) and (G8_Y_T <= pix_y) and (pix_y <= G8_Y_B) else '0';
+   G7_on <= '1' when (G7_X_L <= pix_x) and (pix_x <= G7_X_R) and (G7_Y_T <= pix_y) and (pix_y <= G7_Y_B) else '0';
+   G6_on <= '1' when (G6_X_L <= pix_x) and (pix_x <= G6_X_R) and (G6_Y_T <= pix_y) and (pix_y <= G6_Y_B) else '0';
+   G5_on <= '1' when (G5_X_L <= pix_x) and (pix_x <= G5_X_R) and (G5_Y_T <= pix_y) and (pix_y <= G5_Y_B) else '0';
+   G4_on <= '1' when (G4_X_L <= pix_x) and (pix_x <= G4_X_R) and (G4_Y_T <= pix_y) and (pix_y <= G4_Y_B) else '0';
+   G3_on <= '1' when (G3_X_L <= pix_x) and (pix_x <= G3_X_R) and (G3_Y_T <= pix_y) and (pix_y <= G3_Y_B) else '0';
+   G2_on <= '1' when (G2_X_L <= pix_x) and (pix_x <= G2_X_R) and (G2_Y_T <= pix_y) and (pix_y <= G2_Y_B) else '0';
+   G1_on <= '1' when (G1_X_L <= pix_x) and (pix_x <= G1_X_R) and (G1_Y_T <= pix_y) and (pix_y <= G1_Y_B) else '0';
+   
+   H8_on <= '1' when (H8_X_L <= pix_x) and (pix_x <= H8_X_R) and (H8_Y_T <= pix_y) and (pix_y <= H8_Y_B) else '0';
+   H7_on <= '1' when (H7_X_L <= pix_x) and (pix_x <= H7_X_R) and (H7_Y_T <= pix_y) and (pix_y <= H7_Y_B) else '0';
+   H6_on <= '1' when (H6_X_L <= pix_x) and (pix_x <= H6_X_R) and (H6_Y_T <= pix_y) and (pix_y <= H6_Y_B) else '0';
+   H5_on <= '1' when (H5_X_L <= pix_x) and (pix_x <= H5_X_R) and (H5_Y_T <= pix_y) and (pix_y <= H5_Y_B) else '0';
+   H4_on <= '1' when (H4_X_L <= pix_x) and (pix_x <= H4_X_R) and (H4_Y_T <= pix_y) and (pix_y <= H4_Y_B) else '0';
+   H3_on <= '1' when (H3_X_L <= pix_x) and (pix_x <= H3_X_R) and (H3_Y_T <= pix_y) and (pix_y <= H3_Y_B) else '0';
+   H2_on <= '1' when (H2_X_L <= pix_x) and (pix_x <= H2_X_R) and (H2_Y_T <= pix_y) and (pix_y <= H2_Y_B) else '0';
+   H1_on <= '1' when (H1_X_L <= pix_x) and (pix_x <= H1_X_R) and (H1_Y_T <= pix_y) and (pix_y <= H1_Y_B) else '0';
+   
+   light_rgb <= "110"; -- cyan
+   dark_rgb  <= "011"; -- magenta
+
+
+-- ======================================================================================================
+---- set coordinates of square ball.
+--    process(btn(0))
+--    begin
+--        if btn(0) = '0' then
+--            rom_temp <= KING_ROM;
+--        elsif btn(0) = '1' then
+--            rom_temp <= QUEEN_ROM;
+--        elsif btn(0) = '1' then
+--            rom_temp <= BISH_ROM;
+--        elsif btn(0) = '1' then
+--            rom_temp <= ROOK_ROM;
+--        elsif btn(0) = '1' then
+--            rom_temp <= KNIGHT_ROM;
+--        elsif btn(0) = '1' then
+--            rom_temp <= PAWN_ROM;
+--        elsif btn(0) = '1' then
+--            rom_temp <= BLANK_ROM;
+--        end if;
+--    end process;
+-- ======================================================================================================
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A1_white_addr <= pix_y(5 downto 0) - A1_y_t;
+   rom_A1_white_col <= pix_x(5 downto 0) - A1_x_l; -- ROM column
+   rom_A1_white_data <= board(0)(to_integer(rom_A1_white_addr)); -- Get row data
+   rom_A1_white_bit <= rom_A1_white_data(to_integer(rom_A1_white_col));-- Get column bit
+   
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A2_white_addr <= pix_y(5 downto 0) - A2_y_t;
+   rom_A2_white_col <= pix_x(5 downto 0) - A2_x_l; -- ROM column
+   rom_A2_white_data <= Board(8)(to_integer(rom_A2_white_addr)); -- Get row data
+   rom_A2_white_bit <= rom_A2_white_data(to_integer(rom_A2_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A3_white_addr <= pix_y(5 downto 0) - A3_y_t;
+   rom_A3_white_col <= pix_x(5 downto 0) - A3_x_l; -- ROM column
+   rom_A3_white_data <= Board(16)(to_integer(rom_A3_white_addr)); -- Get row data
+   rom_A3_white_bit <= rom_A3_white_data(to_integer(rom_A3_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A4_white_addr <= pix_y(5 downto 0) - A4_y_t;
+   rom_A4_white_col <= pix_x(5 downto 0) - A4_x_l; -- ROM column
+   rom_A4_white_data <= Board(24)(to_integer(rom_A4_white_addr)); -- Get row data
+   rom_A4_white_bit <= rom_A4_white_data(to_integer(rom_A4_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A5_white_addr <= pix_y(5 downto 0) - A5_y_t;
+   rom_A5_white_col <= pix_x(5 downto 0) - A5_x_l; -- ROM column
+   rom_A5_white_data <= Board(32)(to_integer(rom_A5_white_addr)); -- Get row data
+   rom_A5_white_bit <= rom_A5_white_data(to_integer(rom_A5_white_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A6_white_addr <= pix_y(5 downto 0) - A6_y_t;
+   rom_A6_white_col <= pix_x(5 downto 0) - A6_x_l; -- ROM column
+   rom_A6_white_data <= Board(40)(to_integer(rom_A6_white_addr)); -- Get row data
+   rom_A6_white_bit <= rom_A6_white_data(to_integer(rom_A6_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A7_white_addr <= pix_y(5 downto 0) - A7_y_t;
+   rom_A7_white_col <= pix_x(5 downto 0) - A7_x_l; -- ROM column
+   rom_A7_white_data <= Board(48)(to_integer(rom_A7_white_addr)); -- Get row data
+   rom_A7_white_bit <= rom_A7_white_data(to_integer(rom_A7_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A8_white_addr <= pix_y(5 downto 0) - A8_y_t;
+   rom_A8_white_col <= pix_x(5 downto 0) - A8_x_l; -- ROM column
+   rom_A8_white_data <= Board(56)(to_integer(rom_A8_white_addr)); -- Get row data
+   rom_A8_white_bit <= rom_A8_white_data(to_integer(rom_A8_white_col));-- Get column bit    
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B1_white_addr <= pix_y(5 downto 0) - B1_y_t;
+   rom_B1_white_col <= pix_x(5 downto 0) - B1_x_l; -- ROM column
+   rom_B1_white_data <= Board(1)(to_integer(rom_B1_white_addr)); -- Get row data
+   rom_B1_white_bit <= rom_B1_white_data(to_integer(rom_B1_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B2_white_addr <= pix_y(5 downto 0) - B2_y_t;
+   rom_B2_white_col <= pix_x(5 downto 0) - B2_x_l; -- ROM column
+   rom_B2_white_data <= Board(9)(to_integer(rom_B2_white_addr)); -- Get row data
+   rom_B2_white_bit <= rom_B2_white_data(to_integer(rom_B2_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B3_white_addr <= pix_y(5 downto 0) - B3_y_t;
+   rom_B3_white_col <= pix_x(5 downto 0) - B3_x_l; -- ROM column
+   rom_B3_white_data <= Board(17)(to_integer(rom_B3_white_addr)); -- Get row data
+   rom_B3_white_bit <= rom_B3_white_data(to_integer(rom_B3_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B4_white_addr <= pix_y(5 downto 0) - B4_y_t;
+   rom_B4_white_col <= pix_x(5 downto 0) - B4_x_l; -- ROM column
+   rom_B4_white_data <= Board(25)(to_integer(rom_B4_white_addr)); -- Get row data
+   rom_B4_white_bit <= rom_B4_white_data(to_integer(rom_B4_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B5_white_addr <= pix_y(5 downto 0) - B5_y_t;
+   rom_B5_white_col <= pix_x(5 downto 0) - B5_x_l; -- ROM column
+   rom_B5_white_data <= Board(33)(to_integer(rom_B5_white_addr)); -- Get row data
+   rom_B5_white_bit <= rom_B5_white_data(to_integer(rom_B5_white_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B6_white_addr <= pix_y(5 downto 0) - B6_y_t;
+   rom_B6_white_col <= pix_x(5 downto 0) - B6_x_l; -- ROM column
+   rom_B6_white_data <= Board(41)(to_integer(rom_B6_white_addr)); -- Get row data
+   rom_B6_white_bit <= rom_B6_white_data(to_integer(rom_B6_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B7_white_addr <= pix_y(5 downto 0) - B7_y_t;
+   rom_B7_white_col <= pix_x(5 downto 0) - B7_x_l; -- ROM column
+   rom_B7_white_data <= Board(49)(to_integer(rom_B7_white_addr)); -- Get row data
+   rom_B7_white_bit <= rom_B7_white_data(to_integer(rom_B7_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B8_white_addr <= pix_y(5 downto 0) - B8_y_t;
+   rom_B8_white_col <= pix_x(5 downto 0) - B8_x_l; -- ROM column
+   rom_B8_white_data <= Board(57)(to_integer(rom_B8_white_addr)); -- Get row data
+   rom_B8_white_bit <= rom_B8_white_data(to_integer(rom_B8_white_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C1_white_addr <= pix_y(5 downto 0) - C1_y_t;
+   rom_C1_white_col <= pix_x(5 downto 0) - C1_x_l; -- ROM column
+   rom_C1_white_data <= Board(2)(to_integer(rom_C1_white_addr)); -- Get row data
+   rom_C1_white_bit <= rom_C1_white_data(to_integer(rom_C1_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C2_white_addr <= pix_y(5 downto 0) - C2_y_t;
+   rom_C2_white_col <= pix_x(5 downto 0) - C2_x_l; -- ROM column
+   rom_C2_white_data <= Board(10)(to_integer(rom_C2_white_addr)); -- Get row data
+   rom_C2_white_bit <= rom_C2_white_data(to_integer(rom_C2_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C3_white_addr <= pix_y(5 downto 0) - C3_y_t;
+   rom_C3_white_col <= pix_x(5 downto 0) - C3_x_l; -- ROM column
+   rom_C3_white_data <= Board(18)(to_integer(rom_C3_white_addr)); -- Get row data
+   rom_C3_white_bit <= rom_C3_white_data(to_integer(rom_C3_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C4_white_addr <= pix_y(5 downto 0) - C4_y_t;
+   rom_C4_white_col <= pix_x(5 downto 0) - C4_x_l; -- ROM column
+   rom_C4_white_data <= Board(26)(to_integer(rom_C4_white_addr)); -- Get row data
+   rom_C4_white_bit <= rom_C4_white_data(to_integer(rom_C4_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C5_white_addr <= pix_y(5 downto 0) - C5_y_t;
+   rom_C5_white_col <= pix_x(5 downto 0) - C5_x_l; -- ROM column
+   rom_C5_white_data <= Board(34)(to_integer(rom_C5_white_addr)); -- Get row data
+   rom_C5_white_bit <= rom_C5_white_data(to_integer(rom_C5_white_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C6_white_addr <= pix_y(5 downto 0) - C6_y_t;
+   rom_C6_white_col <= pix_x(5 downto 0) - C6_x_l; -- ROM column
+   rom_C6_white_data <= Board(42)(to_integer(rom_C6_white_addr)); -- Get row data
+   rom_C6_white_bit <= rom_C6_white_data(to_integer(rom_C6_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C7_white_addr <= pix_y(5 downto 0) - C7_y_t;
+   rom_C7_white_col <= pix_x(5 downto 0) - C7_x_l; -- ROM column
+   rom_C7_white_data <= Board(50)(to_integer(rom_C7_white_addr)); -- Get row data
+   rom_C7_white_bit <= rom_C7_white_data(to_integer(rom_C7_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C8_white_addr <= pix_y(5 downto 0) - C8_y_t;
+   rom_C8_white_col <= pix_x(5 downto 0) - C8_x_l; -- ROM column
+   rom_C8_white_data <= Board(58)(to_integer(rom_C8_white_addr)); -- Get row data
+   rom_C8_white_bit <= rom_C8_white_data(to_integer(rom_C8_white_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D1_white_addr <= pix_y(5 downto 0) - D1_y_t;
+   rom_D1_white_col <= pix_x(5 downto 0) - D1_x_l; -- ROM column
+   rom_D1_white_data <= Board(3)(to_integer(rom_D1_white_addr)); -- Get row data
+   rom_D1_white_bit <= rom_D1_white_data(to_integer(rom_D1_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D2_white_addr <= pix_y(5 downto 0) - D2_y_t;
+   rom_D2_white_col <= pix_x(5 downto 0) - D2_x_l; -- ROM column
+   rom_D2_white_data <= Board(11)(to_integer(rom_D2_white_addr)); -- Get row data
+   rom_D2_white_bit <= rom_D2_white_data(to_integer(rom_D2_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D3_white_addr <= pix_y(5 downto 0) - D3_y_t;
+   rom_D3_white_col <= pix_x(5 downto 0) - D3_x_l; -- ROM column
+   rom_D3_white_data <= Board(19)(to_integer(rom_D3_white_addr)); -- Get row data
+   rom_D3_white_bit <= rom_D3_white_data(to_integer(rom_D3_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D4_white_addr <= pix_y(5 downto 0) - D4_y_t;
+   rom_D4_white_col <= pix_x(5 downto 0) - D4_x_l; -- ROM column
+   rom_D4_white_data <= Board(27)(to_integer(rom_D4_white_addr)); -- Get row data
+   rom_D4_white_bit <= rom_D4_white_data(to_integer(rom_D4_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D5_white_addr <= pix_y(5 downto 0) - D5_y_t;
+   rom_D5_white_col <= pix_x(5 downto 0) - D5_x_l; -- ROM column
+   rom_D5_white_data <= Board(35)(to_integer(rom_D5_white_addr)); -- Get row data
+   rom_D5_white_bit <= rom_D5_white_data(to_integer(rom_D5_white_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D6_white_addr <= pix_y(5 downto 0) - D6_y_t;
+   rom_D6_white_col <= pix_x(5 downto 0) - D6_x_l; -- ROM column
+   rom_D6_white_data <= Board(43)(to_integer(rom_D6_white_addr)); -- Get row data
+   rom_D6_white_bit <= rom_D6_white_data(to_integer(rom_D6_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D7_white_addr <= pix_y(5 downto 0) - D7_y_t;
+   rom_D7_white_col <= pix_x(5 downto 0) - D7_x_l; -- ROM column
+   rom_D7_white_data <= Board(51)(to_integer(rom_D7_white_addr)); -- Get row data
+   rom_D7_white_bit <= rom_D7_white_data(to_integer(rom_D7_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D8_white_addr <= pix_y(5 downto 0) - D8_y_t;
+   rom_D8_white_col <= pix_x(5 downto 0) - D8_x_l; -- ROM column
+   rom_D8_white_data <= Board(59)(to_integer(rom_D8_white_addr)); -- Get row data
+   rom_D8_white_bit <= rom_D8_white_data(to_integer(rom_D8_white_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E1_white_addr <= pix_y(5 downto 0) - E1_y_t;
+   rom_E1_white_col <= pix_x(5 downto 0) - E1_x_l; -- ROM column
+   rom_E1_white_data <= Board(4)(to_integer(rom_E1_white_addr)); -- Get row data
+   rom_E1_white_bit <= rom_E1_white_data(to_integer(rom_E1_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E2_white_addr <= pix_y(5 downto 0) - E2_y_t;
+   rom_E2_white_col <= pix_x(5 downto 0) - E2_x_l; -- ROM column
+   rom_E2_white_data <= Board(12)(to_integer(rom_E2_white_addr)); -- Get row data
+   rom_E2_white_bit <= rom_E2_white_data(to_integer(rom_E2_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E3_white_addr <= pix_y(5 downto 0) - E3_y_t;
+   rom_E3_white_col <= pix_x(5 downto 0) - E3_x_l; -- ROM column
+   rom_E3_white_data <= Board(20)(to_integer(rom_E3_white_addr)); -- Get row data
+   rom_E3_white_bit <= rom_E3_white_data(to_integer(rom_E3_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E4_white_addr <= pix_y(5 downto 0) - E4_y_t;
+   rom_E4_white_col <= pix_x(5 downto 0) - E4_x_l; -- ROM column
+   rom_E4_white_data <= Board(28)(to_integer(rom_E4_white_addr)); -- Get row data
+   rom_E4_white_bit <= rom_E4_white_data(to_integer(rom_E4_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E5_white_addr <= pix_y(5 downto 0) - E5_y_t;
+   rom_E5_white_col <= pix_x(5 downto 0) - E5_x_l; -- ROM column
+   rom_E5_white_data <= Board(36)(to_integer(rom_E5_white_addr)); -- Get row data
+   rom_E5_white_bit <= rom_E5_white_data(to_integer(rom_E5_white_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E6_white_addr <= pix_y(5 downto 0) - E6_y_t;
+   rom_E6_white_col <= pix_x(5 downto 0) - E6_x_l; -- ROM column
+   rom_E6_white_data <= Board(44)(to_integer(rom_E6_white_addr)); -- Get row data
+   rom_E6_white_bit <= rom_E6_white_data(to_integer(rom_E6_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E7_white_addr <= pix_y(5 downto 0) - E7_y_t;
+   rom_E7_white_col <= pix_x(5 downto 0) - E7_x_l; -- ROM column
+   rom_E7_white_data <= Board(52)(to_integer(rom_E7_white_addr)); -- Get row data
+   rom_E7_white_bit <= rom_E7_white_data(to_integer(rom_E7_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E8_white_addr <= pix_y(5 downto 0) - E8_y_t;
+   rom_E8_white_col <= pix_x(5 downto 0) - E8_x_l; -- ROM column
+   rom_E8_white_data <= Board(60)(to_integer(rom_E8_white_addr)); -- Get row data
+   rom_E8_white_bit <= rom_E8_white_data(to_integer(rom_E8_white_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F1_white_addr <= pix_y(5 downto 0) - F1_y_t;
+   rom_F1_white_col <= pix_x(5 downto 0) - F1_x_l; -- ROM column
+   rom_F1_white_data <= Board(5)(to_integer(rom_F1_white_addr)); -- Get row data
+   rom_F1_white_bit <= rom_F1_white_data(to_integer(rom_F1_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F2_white_addr <= pix_y(5 downto 0) - F2_y_t;
+   rom_F2_white_col <= pix_x(5 downto 0) - F2_x_l; -- ROM column
+   rom_F2_white_data <= Board(13)(to_integer(rom_F2_white_addr)); -- Get row data
+   rom_F2_white_bit <= rom_F2_white_data(to_integer(rom_F2_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F3_white_addr <= pix_y(5 downto 0) - F3_y_t;
+   rom_F3_white_col <= pix_x(5 downto 0) - F3_x_l; -- ROM column
+   rom_F3_white_data <= Board(21)(to_integer(rom_F3_white_addr)); -- Get row data
+   rom_F3_white_bit <= rom_F3_white_data(to_integer(rom_F3_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F4_white_addr <= pix_y(5 downto 0) - F4_y_t;
+   rom_F4_white_col <= pix_x(5 downto 0) - F4_x_l; -- ROM column
+   rom_F4_white_data <= Board(29)(to_integer(rom_F4_white_addr)); -- Get row data
+   rom_F4_white_bit <= rom_F4_white_data(to_integer(rom_F4_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F5_white_addr <= pix_y(5 downto 0) - F5_y_t;
+   rom_F5_white_col <= pix_x(5 downto 0) - F5_x_l; -- ROM column
+   rom_F5_white_data <= Board(37)(to_integer(rom_F5_white_addr)); -- Get row data
+   rom_F5_white_bit <= rom_F5_white_data(to_integer(rom_F5_white_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F6_white_addr <= pix_y(5 downto 0) - F6_y_t;
+   rom_F6_white_col <= pix_x(5 downto 0) - F6_x_l; -- ROM column
+   rom_F6_white_data <= Board(45)(to_integer(rom_F6_white_addr)); -- Get row data
+   rom_F6_white_bit <= rom_F6_white_data(to_integer(rom_F6_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F7_white_addr <= pix_y(5 downto 0) - F7_y_t;
+   rom_F7_white_col <= pix_x(5 downto 0) - F7_x_l; -- ROM column
+   rom_F7_white_data <= Board(53)(to_integer(rom_F7_white_addr)); -- Get row data
+   rom_F7_white_bit <= rom_F7_white_data(to_integer(rom_F7_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F8_white_addr <= pix_y(5 downto 0) - F8_y_t;
+   rom_F8_white_col <= pix_x(5 downto 0) - F8_x_l; -- ROM column
+   rom_F8_white_data <= Board(61)(to_integer(rom_F8_white_addr)); -- Get row data
+   rom_F8_white_bit <= rom_F8_white_data(to_integer(rom_F8_white_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G1_white_addr <= pix_y(5 downto 0) - G1_y_t;
+   rom_G1_white_col <= pix_x(5 downto 0) - G1_x_l; -- ROM column
+   rom_G1_white_data <= Board(6)(to_integer(rom_G1_white_addr)); -- Get row data
+   rom_G1_white_bit <= rom_G1_white_data(to_integer(rom_G1_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G2_white_addr <= pix_y(5 downto 0) - G2_y_t;
+   rom_G2_white_col <= pix_x(5 downto 0) - G2_x_l; -- ROM column
+   rom_G2_white_data <= Board(14)(to_integer(rom_G2_white_addr)); -- Get row data
+   rom_G2_white_bit <= rom_G2_white_data(to_integer(rom_G2_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G3_white_addr <= pix_y(5 downto 0) - G3_y_t;
+   rom_G3_white_col <= pix_x(5 downto 0) - G3_x_l; -- ROM column
+   rom_G3_white_data <= Board(22)(to_integer(rom_G3_white_addr)); -- Get row data
+   rom_G3_white_bit <= rom_G3_white_data(to_integer(rom_G3_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G4_white_addr <= pix_y(5 downto 0) - G4_y_t;
+   rom_G4_white_col <= pix_x(5 downto 0) - G4_x_l; -- ROM column
+   rom_G4_white_data <= Board(30)(to_integer(rom_G4_white_addr)); -- Get row data
+   rom_G4_white_bit <= rom_G4_white_data(to_integer(rom_G4_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G5_white_addr <= pix_y(5 downto 0) - G5_y_t;
+   rom_G5_white_col <= pix_x(5 downto 0) - G5_x_l; -- ROM column
+   rom_G5_white_data <= Board(38)(to_integer(rom_G5_white_addr)); -- Get row data
+   rom_G5_white_bit <= rom_G5_white_data(to_integer(rom_G5_white_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G6_white_addr <= pix_y(5 downto 0) - G6_y_t;
+   rom_G6_white_col <= pix_x(5 downto 0) - G6_x_l; -- ROM column
+   rom_G6_white_data <= Board(46)(to_integer(rom_G6_white_addr)); -- Get row data
+   rom_G6_white_bit <= rom_G6_white_data(to_integer(rom_G6_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G7_white_addr <= pix_y(5 downto 0) - G7_y_t;
+   rom_G7_white_col <= pix_x(5 downto 0) - G7_x_l; -- ROM column
+   rom_G7_white_data <= Board(54)(to_integer(rom_G7_white_addr)); -- Get row data
+   rom_G7_white_bit <= rom_G7_white_data(to_integer(rom_G7_white_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G8_white_addr <= pix_y(5 downto 0) - G8_y_t;
+   rom_G8_white_col <= pix_x(5 downto 0) - G8_x_l; -- ROM column
+   rom_G8_white_data <= Board(62)(to_integer(rom_G8_white_addr)); -- Get row data
+   rom_G8_white_bit <= rom_G8_white_data(to_integer(rom_G8_white_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H1_white_addr <= pix_y(5 downto 0) - H1_y_t;
+   rom_H1_white_col <= pix_x(5 downto 0) - H1_x_l; -- ROM column
+   rom_H1_white_data <= Board(7)(to_integer(rom_H1_white_addr)); -- Het row data
+   rom_H1_white_bit <= rom_H1_white_data(to_integer(rom_H1_white_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H2_white_addr <= pix_y(5 downto 0) - H2_y_t;
+   rom_H2_white_col <= pix_x(5 downto 0) - H2_x_l; -- ROM column
+   rom_H2_white_data <= Board(15)(to_integer(rom_H2_white_addr)); -- Het row data
+   rom_H2_white_bit <= rom_H2_white_data(to_integer(rom_H2_white_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H3_white_addr <= pix_y(5 downto 0) - H3_y_t;
+   rom_H3_white_col <= pix_x(5 downto 0) - H3_x_l; -- ROM column
+   rom_H3_white_data <= Board(23)(to_integer(rom_H3_white_addr)); -- Het row data
+   rom_H3_white_bit <= rom_H3_white_data(to_integer(rom_H3_white_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H4_white_addr <= pix_y(5 downto 0) - H4_y_t;
+   rom_H4_white_col <= pix_x(5 downto 0) - H4_x_l; -- ROM column
+   rom_H4_white_data <= Board(31)(to_integer(rom_H4_white_addr)); -- Het row data
+   rom_H4_white_bit <= rom_H4_white_data(to_integer(rom_H4_white_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H5_white_addr <= pix_y(5 downto 0) - H5_y_t;
+   rom_H5_white_col <= pix_x(5 downto 0) - H5_x_l; -- ROM column
+   rom_H5_white_data <= Board(39)(to_integer(rom_H5_white_addr)); -- Het row data
+   rom_H5_white_bit <= rom_H5_white_data(to_integer(rom_H5_white_col));-- Het column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H6_white_addr <= pix_y(5 downto 0) - H6_y_t;
+   rom_H6_white_col <= pix_x(5 downto 0) - H6_x_l; -- ROM column
+   rom_H6_white_data <= Board(47)(to_integer(rom_H6_white_addr)); -- Het row data
+   rom_H6_white_bit <= rom_H6_white_data(to_integer(rom_H6_white_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H7_white_addr <= pix_y(5 downto 0) - H7_y_t;
+   rom_H7_white_col <= pix_x(5 downto 0) - H7_x_l; -- ROM column
+   rom_H7_white_data <= Board(55)(to_integer(rom_H7_white_addr)); -- Het row data
+   rom_H7_white_bit <= rom_H7_white_data(to_integer(rom_H7_white_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H8_white_addr <= pix_y(5 downto 0) - H8_y_t;
+   rom_H8_white_col <= pix_x(5 downto 0) - H8_x_l; -- ROM column
+   rom_H8_white_data <= Board(63)(to_integer(rom_H8_white_addr)); -- Het row data
+   rom_H8_white_bit <= rom_H8_white_data(to_integer(rom_H8_white_col));-- Het column bit      
+   
+   -- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A1_black_addr <= pix_y(5 downto 0) - A1_y_t;
+   rom_A1_black_col <= pix_x(5 downto 0) - A1_x_l; -- ROM column
+   rom_A1_black_data <= Board1(0)(to_integer(rom_A1_black_addr)); -- Get row data
+   rom_A1_black_bit <= rom_A1_black_data(to_integer(rom_A1_black_col));-- Get column bit
+   
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A2_black_addr <= pix_y(5 downto 0) - A2_y_t;
+   rom_A2_black_col <= pix_x(5 downto 0) - A2_x_l; -- ROM column
+   rom_A2_black_data <= Board1(8)(to_integer(rom_A2_black_addr)); -- Get row data
+   rom_A2_black_bit <= rom_A2_black_data(to_integer(rom_A2_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A3_black_addr <= pix_y(5 downto 0) - A3_y_t;
+   rom_A3_black_col <= pix_x(5 downto 0) - A3_x_l; -- ROM column
+   rom_A3_black_data <= Board1(16)(to_integer(rom_A3_black_addr)); -- Get row data
+   rom_A3_black_bit <= rom_A3_black_data(to_integer(rom_A3_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A4_black_addr <= pix_y(5 downto 0) - A4_y_t;
+   rom_A4_black_col <= pix_x(5 downto 0) - A4_x_l; -- ROM column
+   rom_A4_black_data <= Board1(24)(to_integer(rom_A4_black_addr)); -- Get row data
+   rom_A4_black_bit <= rom_A4_black_data(to_integer(rom_A4_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A5_black_addr <= pix_y(5 downto 0) - A5_y_t;
+   rom_A5_black_col <= pix_x(5 downto 0) - A5_x_l; -- ROM column
+   rom_A5_black_data <= Board1(32)(to_integer(rom_A5_black_addr)); -- Get row data
+   rom_A5_black_bit <= rom_A5_black_data(to_integer(rom_A5_black_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A6_black_addr <= pix_y(5 downto 0) - A6_y_t;
+   rom_A6_black_col <= pix_x(5 downto 0) - A6_x_l; -- ROM column
+   rom_A6_black_data <= Board1(40)(to_integer(rom_A6_black_addr)); -- Get row data
+   rom_A6_black_bit <= rom_A6_black_data(to_integer(rom_A6_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A7_black_addr <= pix_y(5 downto 0) - A7_y_t;
+   rom_A7_black_col <= pix_x(5 downto 0) - A7_x_l; -- ROM column
+   rom_A7_black_data <= Board1(48)(to_integer(rom_A7_black_addr)); -- Get row data
+   rom_A7_black_bit <= rom_A7_black_data(to_integer(rom_A7_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_A8_black_addr <= pix_y(5 downto 0) - A8_y_t;
+   rom_A8_black_col <= pix_x(5 downto 0) - A8_x_l; -- ROM column
+   rom_A8_black_data <= Board1(56)(to_integer(rom_A8_black_addr)); -- Get row data
+   rom_A8_black_bit <= rom_A8_black_data(to_integer(rom_A8_black_col));-- Get column bit    
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B1_black_addr <= pix_y(5 downto 0) - B1_y_t;
+   rom_B1_black_col <= pix_x(5 downto 0) - B1_x_l; -- ROM column
+   rom_B1_black_data <= Board1(1)(to_integer(rom_B1_black_addr)); -- Get row data
+   rom_B1_black_bit <= rom_B1_black_data(to_integer(rom_B1_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B2_black_addr <= pix_y(5 downto 0) - B2_y_t;
+   rom_B2_black_col <= pix_x(5 downto 0) - B2_x_l; -- ROM column
+   rom_B2_black_data <= Board1(9)(to_integer(rom_B2_black_addr)); -- Get row data
+   rom_B2_black_bit <= rom_B2_black_data(to_integer(rom_B2_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B3_black_addr <= pix_y(5 downto 0) - B3_y_t;
+   rom_B3_black_col <= pix_x(5 downto 0) - B3_x_l; -- ROM column
+   rom_B3_black_data <= Board1(17)(to_integer(rom_B3_black_addr)); -- Get row data
+   rom_B3_black_bit <= rom_B3_black_data(to_integer(rom_B3_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B4_black_addr <= pix_y(5 downto 0) - B4_y_t;
+   rom_B4_black_col <= pix_x(5 downto 0) - B4_x_l; -- ROM column
+   rom_B4_black_data <= Board1(25)(to_integer(rom_B4_black_addr)); -- Get row data
+   rom_B4_black_bit <= rom_B4_black_data(to_integer(rom_B4_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B5_black_addr <= pix_y(5 downto 0) - B5_y_t;
+   rom_B5_black_col <= pix_x(5 downto 0) - B5_x_l; -- ROM column
+   rom_B5_black_data <= Board1(33)(to_integer(rom_B5_black_addr)); -- Get row data
+   rom_B5_black_bit <= rom_B5_black_data(to_integer(rom_B5_black_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B6_black_addr <= pix_y(5 downto 0) - B6_y_t;
+   rom_B6_black_col <= pix_x(5 downto 0) - B6_x_l; -- ROM column
+   rom_B6_black_data <= Board1(41)(to_integer(rom_B6_black_addr)); -- Get row data
+   rom_B6_black_bit <= rom_B6_black_data(to_integer(rom_B6_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B7_black_addr <= pix_y(5 downto 0) - B7_y_t;
+   rom_B7_black_col <= pix_x(5 downto 0) - B7_x_l; -- ROM column
+   rom_B7_black_data <= Board1(49)(to_integer(rom_B7_black_addr)); -- Get row data
+   rom_B7_black_bit <= rom_B7_black_data(to_integer(rom_B7_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_B8_black_addr <= pix_y(5 downto 0) - B8_y_t;
+   rom_B8_black_col <= pix_x(5 downto 0) - B8_x_l; -- ROM column
+   rom_B8_black_data <= Board1(57)(to_integer(rom_B8_black_addr)); -- Get row data
+   rom_B8_black_bit <= rom_B8_black_data(to_integer(rom_B8_black_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C1_black_addr <= pix_y(5 downto 0) - C1_y_t;
+   rom_C1_black_col <= pix_x(5 downto 0) - C1_x_l; -- ROM column
+   rom_C1_black_data <= Board1(2)(to_integer(rom_C1_black_addr)); -- Get row data
+   rom_C1_black_bit <= rom_C1_black_data(to_integer(rom_C1_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C2_black_addr <= pix_y(5 downto 0) - C2_y_t;
+   rom_C2_black_col <= pix_x(5 downto 0) - C2_x_l; -- ROM column
+   rom_C2_black_data <= Board1(10)(to_integer(rom_C2_black_addr)); -- Get row data
+   rom_C2_black_bit <= rom_C2_black_data(to_integer(rom_C2_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C3_black_addr <= pix_y(5 downto 0) - C3_y_t;
+   rom_C3_black_col <= pix_x(5 downto 0) - C3_x_l; -- ROM column
+   rom_C3_black_data <= Board1(18)(to_integer(rom_C3_black_addr)); -- Get row data
+   rom_C3_black_bit <= rom_C3_black_data(to_integer(rom_C3_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C4_black_addr <= pix_y(5 downto 0) - C4_y_t;
+   rom_C4_black_col <= pix_x(5 downto 0) - C4_x_l; -- ROM column
+   rom_C4_black_data <= Board1(26)(to_integer(rom_C4_black_addr)); -- Get row data
+   rom_C4_black_bit <= rom_C4_black_data(to_integer(rom_C4_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C5_black_addr <= pix_y(5 downto 0) - C5_y_t;
+   rom_C5_black_col <= pix_x(5 downto 0) - C5_x_l; -- ROM column
+   rom_C5_black_data <= Board1(34)(to_integer(rom_C5_black_addr)); -- Get row data
+   rom_C5_black_bit <= rom_C5_black_data(to_integer(rom_C5_black_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C6_black_addr <= pix_y(5 downto 0) - C6_y_t;
+   rom_C6_black_col <= pix_x(5 downto 0) - C6_x_l; -- ROM column
+   rom_C6_black_data <= Board1(42)(to_integer(rom_C6_black_addr)); -- Get row data
+   rom_C6_black_bit <= rom_C6_black_data(to_integer(rom_C6_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C7_black_addr <= pix_y(5 downto 0) - C7_y_t;
+   rom_C7_black_col <= pix_x(5 downto 0) - C7_x_l; -- ROM column
+   rom_C7_black_data <= Board1(50)(to_integer(rom_C7_black_addr)); -- Get row data
+   rom_C7_black_bit <= rom_C7_black_data(to_integer(rom_C7_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_C8_black_addr <= pix_y(5 downto 0) - C8_y_t;
+   rom_C8_black_col <= pix_x(5 downto 0) - C8_x_l; -- ROM column
+   rom_C8_black_data <= Board1(58)(to_integer(rom_C8_black_addr)); -- Get row data
+   rom_C8_black_bit <= rom_C8_black_data(to_integer(rom_C8_black_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D1_black_addr <= pix_y(5 downto 0) - D1_y_t;
+   rom_D1_black_col <= pix_x(5 downto 0) - D1_x_l; -- ROM column
+   rom_D1_black_data <= Board1(3)(to_integer(rom_D1_black_addr)); -- Get row data
+   rom_D1_black_bit <= rom_D1_black_data(to_integer(rom_D1_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D2_black_addr <= pix_y(5 downto 0) - D2_y_t;
+   rom_D2_black_col <= pix_x(5 downto 0) - D2_x_l; -- ROM column
+   rom_D2_black_data <= Board1(11)(to_integer(rom_D2_black_addr)); -- Get row data
+   rom_D2_black_bit <= rom_D2_black_data(to_integer(rom_D2_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D3_black_addr <= pix_y(5 downto 0) - D3_y_t;
+   rom_D3_black_col <= pix_x(5 downto 0) - D3_x_l; -- ROM column
+   rom_D3_black_data <= Board1(19)(to_integer(rom_D3_black_addr)); -- Get row data
+   rom_D3_black_bit <= rom_D3_black_data(to_integer(rom_D3_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D4_black_addr <= pix_y(5 downto 0) - D4_y_t;
+   rom_D4_black_col <= pix_x(5 downto 0) - D4_x_l; -- ROM column
+   rom_D4_black_data <= Board1(27)(to_integer(rom_D4_black_addr)); -- Get row data
+   rom_D4_black_bit <= rom_D4_black_data(to_integer(rom_D4_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D5_black_addr <= pix_y(5 downto 0) - D5_y_t;
+   rom_D5_black_col <= pix_x(5 downto 0) - D5_x_l; -- ROM column
+   rom_D5_black_data <= Board1(35)(to_integer(rom_D5_black_addr)); -- Get row data
+   rom_D5_black_bit <= rom_D5_black_data(to_integer(rom_D5_black_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D6_black_addr <= pix_y(5 downto 0) - D6_y_t;
+   rom_D6_black_col <= pix_x(5 downto 0) - D6_x_l; -- ROM column
+   rom_D6_black_data <= Board1(43)(to_integer(rom_D6_black_addr)); -- Get row data
+   rom_D6_black_bit <= rom_D6_black_data(to_integer(rom_D6_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D7_black_addr <= pix_y(5 downto 0) - D7_y_t;
+   rom_D7_black_col <= pix_x(5 downto 0) - D7_x_l; -- ROM column
+   rom_D7_black_data <= Board1(51)(to_integer(rom_D7_black_addr)); -- Get row data
+   rom_D7_black_bit <= rom_D7_black_data(to_integer(rom_D7_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_D8_black_addr <= pix_y(5 downto 0) - D8_y_t;
+   rom_D8_black_col <= pix_x(5 downto 0) - D8_x_l; -- ROM column
+   rom_D8_black_data <= Board1(59)(to_integer(rom_D8_black_addr)); -- Get row data
+   rom_D8_black_bit <= rom_D8_black_data(to_integer(rom_D8_black_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E1_black_addr <= pix_y(5 downto 0) - E1_y_t;
+   rom_E1_black_col <= pix_x(5 downto 0) - E1_x_l; -- ROM column
+   rom_E1_black_data <= Board1(4)(to_integer(rom_E1_black_addr)); -- Get row data
+   rom_E1_black_bit <= rom_E1_black_data(to_integer(rom_E1_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E2_black_addr <= pix_y(5 downto 0) - E2_y_t;
+   rom_E2_black_col <= pix_x(5 downto 0) - E2_x_l; -- ROM column
+   rom_E2_black_data <= Board1(12)(to_integer(rom_E2_black_addr)); -- Get row data
+   rom_E2_black_bit <= rom_E2_black_data(to_integer(rom_E2_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E3_black_addr <= pix_y(5 downto 0) - E3_y_t;
+   rom_E3_black_col <= pix_x(5 downto 0) - E3_x_l; -- ROM column
+   rom_E3_black_data <= Board1(20)(to_integer(rom_E3_black_addr)); -- Get row data
+   rom_E3_black_bit <= rom_E3_black_data(to_integer(rom_E3_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E4_black_addr <= pix_y(5 downto 0) - E4_y_t;
+   rom_E4_black_col <= pix_x(5 downto 0) - E4_x_l; -- ROM column
+   rom_E4_black_data <= Board1(28)(to_integer(rom_E4_black_addr)); -- Get row data
+   rom_E4_black_bit <= rom_E4_black_data(to_integer(rom_E4_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E5_black_addr <= pix_y(5 downto 0) - E5_y_t;
+   rom_E5_black_col <= pix_x(5 downto 0) - E5_x_l; -- ROM column
+   rom_E5_black_data <= Board1(36)(to_integer(rom_E5_black_addr)); -- Get row data
+   rom_E5_black_bit <= rom_E5_black_data(to_integer(rom_E5_black_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E6_black_addr <= pix_y(5 downto 0) - E6_y_t;
+   rom_E6_black_col <= pix_x(5 downto 0) - E6_x_l; -- ROM column
+   rom_E6_black_data <= Board1(44)(to_integer(rom_E6_black_addr)); -- Get row data
+   rom_E6_black_bit <= rom_E6_black_data(to_integer(rom_E6_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E7_black_addr <= pix_y(5 downto 0) - E7_y_t;
+   rom_E7_black_col <= pix_x(5 downto 0) - E7_x_l; -- ROM column
+   rom_E7_black_data <= Board1(52)(to_integer(rom_E7_black_addr)); -- Get row data
+   rom_E7_black_bit <= rom_E7_black_data(to_integer(rom_E7_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_E8_black_addr <= pix_y(5 downto 0) - E8_y_t;
+   rom_E8_black_col <= pix_x(5 downto 0) - E8_x_l; -- ROM column
+   rom_E8_black_data <= Board1(60)(to_integer(rom_E8_black_addr)); -- Get row data
+   rom_E8_black_bit <= rom_E8_black_data(to_integer(rom_E8_black_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F1_black_addr <= pix_y(5 downto 0) - F1_y_t;
+   rom_F1_black_col <= pix_x(5 downto 0) - F1_x_l; -- ROM column
+   rom_F1_black_data <= Board1(5)(to_integer(rom_F1_black_addr)); -- Get row data
+   rom_F1_black_bit <= rom_F1_black_data(to_integer(rom_F1_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F2_black_addr <= pix_y(5 downto 0) - F2_y_t;
+   rom_F2_black_col <= pix_x(5 downto 0) - F2_x_l; -- ROM column
+   rom_F2_black_data <= Board1(13)(to_integer(rom_F2_black_addr)); -- Get row data
+   rom_F2_black_bit <= rom_F2_black_data(to_integer(rom_F2_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F3_black_addr <= pix_y(5 downto 0) - F3_y_t;
+   rom_F3_black_col <= pix_x(5 downto 0) - F3_x_l; -- ROM column
+   rom_F3_black_data <= Board1(21)(to_integer(rom_F3_black_addr)); -- Get row data
+   rom_F3_black_bit <= rom_F3_black_data(to_integer(rom_F3_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F4_black_addr <= pix_y(5 downto 0) - F4_y_t;
+   rom_F4_black_col <= pix_x(5 downto 0) - F4_x_l; -- ROM column
+   rom_F4_black_data <= Board1(29)(to_integer(rom_F4_black_addr)); -- Get row data
+   rom_F4_black_bit <= rom_F4_black_data(to_integer(rom_F4_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F5_black_addr <= pix_y(5 downto 0) - F5_y_t;
+   rom_F5_black_col <= pix_x(5 downto 0) - F5_x_l; -- ROM column
+   rom_F5_black_data <= Board1(37)(to_integer(rom_F5_black_addr)); -- Get row data
+   rom_F5_black_bit <= rom_F5_black_data(to_integer(rom_F5_black_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F6_black_addr <= pix_y(5 downto 0) - F6_y_t;
+   rom_F6_black_col <= pix_x(5 downto 0) - F6_x_l; -- ROM column
+   rom_F6_black_data <= Board1(45)(to_integer(rom_F6_black_addr)); -- Get row data
+   rom_F6_black_bit <= rom_F6_black_data(to_integer(rom_F6_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F7_black_addr <= pix_y(5 downto 0) - F7_y_t;
+   rom_F7_black_col <= pix_x(5 downto 0) - F7_x_l; -- ROM column
+   rom_F7_black_data <= Board1(53)(to_integer(rom_F7_black_addr)); -- Get row data
+   rom_F7_black_bit <= rom_F7_black_data(to_integer(rom_F7_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_F8_black_addr <= pix_y(5 downto 0) - F8_y_t;
+   rom_F8_black_col <= pix_x(5 downto 0) - F8_x_l; -- ROM column
+   rom_F8_black_data <= Board1(61)(to_integer(rom_F8_black_addr)); -- Get row data
+   rom_F8_black_bit <= rom_F8_black_data(to_integer(rom_F8_black_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G1_black_addr <= pix_y(5 downto 0) - G1_y_t;
+   rom_G1_black_col <= pix_x(5 downto 0) - G1_x_l; -- ROM column
+   rom_G1_black_data <= Board1(6)(to_integer(rom_G1_black_addr)); -- Get row data
+   rom_G1_black_bit <= rom_G1_black_data(to_integer(rom_G1_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G2_black_addr <= pix_y(5 downto 0) - G2_y_t;
+   rom_G2_black_col <= pix_x(5 downto 0) - G2_x_l; -- ROM column
+   rom_G2_black_data <= Board1(14)(to_integer(rom_G2_black_addr)); -- Get row data
+   rom_G2_black_bit <= rom_G2_black_data(to_integer(rom_G2_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G3_black_addr <= pix_y(5 downto 0) - G3_y_t;
+   rom_G3_black_col <= pix_x(5 downto 0) - G3_x_l; -- ROM column
+   rom_G3_black_data <= Board1(22)(to_integer(rom_G3_black_addr)); -- Get row data
+   rom_G3_black_bit <= rom_G3_black_data(to_integer(rom_G3_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G4_black_addr <= pix_y(5 downto 0) - G4_y_t;
+   rom_G4_black_col <= pix_x(5 downto 0) - G4_x_l; -- ROM column
+   rom_G4_black_data <= Board1(30)(to_integer(rom_G4_black_addr)); -- Get row data
+   rom_G4_black_bit <= rom_G4_black_data(to_integer(rom_G4_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G5_black_addr <= pix_y(5 downto 0) - G5_y_t;
+   rom_G5_black_col <= pix_x(5 downto 0) - G5_x_l; -- ROM column
+   rom_G5_black_data <= Board1(38)(to_integer(rom_G5_black_addr)); -- Get row data
+   rom_G5_black_bit <= rom_G5_black_data(to_integer(rom_G5_black_col));-- Get column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G6_black_addr <= pix_y(5 downto 0) - G6_y_t;
+   rom_G6_black_col <= pix_x(5 downto 0) - G6_x_l; -- ROM column
+   rom_G6_black_data <= Board1(46)(to_integer(rom_G6_black_addr)); -- Get row data
+   rom_G6_black_bit <= rom_G6_black_data(to_integer(rom_G6_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G7_black_addr <= pix_y(5 downto 0) - G7_y_t;
+   rom_G7_black_col <= pix_x(5 downto 0) - G7_x_l; -- ROM column
+   rom_G7_black_data <= Board1(54)(to_integer(rom_G7_black_addr)); -- Get row data
+   rom_G7_black_bit <= rom_G7_black_data(to_integer(rom_G7_black_col));-- Get column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_G8_black_addr <= pix_y(5 downto 0) - G8_y_t;
+   rom_G8_black_col <= pix_x(5 downto 0) - G8_x_l; -- ROM column
+   rom_G8_black_data <= Board1(62)(to_integer(rom_G8_black_addr)); -- Get row data
+   rom_G8_black_bit <= rom_G8_black_data(to_integer(rom_G8_black_col));-- Get column bit      
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H1_black_addr <= pix_y(5 downto 0) - H1_y_t;
+   rom_H1_black_col <= pix_x(5 downto 0) - H1_x_l; -- ROM column
+   rom_H1_black_data <= Board1(7)(to_integer(rom_H1_black_addr)); -- Het row data
+   rom_H1_black_bit <= rom_H1_black_data(to_integer(rom_H1_black_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H2_black_addr <= pix_y(5 downto 0) - H2_y_t;
+   rom_H2_black_col <= pix_x(5 downto 0) - H2_x_l; -- ROM column
+   rom_H2_black_data <= Board1(15)(to_integer(rom_H2_black_addr)); -- Het row data
+   rom_H2_black_bit <= rom_H2_black_data(to_integer(rom_H2_black_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H3_black_addr <= pix_y(5 downto 0) - H3_y_t;
+   rom_H3_black_col <= pix_x(5 downto 0) - H3_x_l; -- ROM column
+   rom_H3_black_data <= Board1(23)(to_integer(rom_H3_black_addr)); -- Het row data
+   rom_H3_black_bit <= rom_H3_black_data(to_integer(rom_H3_black_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H4_black_addr <= pix_y(5 downto 0) - H4_y_t;
+   rom_H4_black_col <= pix_x(5 downto 0) - H4_x_l; -- ROM column
+   rom_H4_black_data <= Board1(31)(to_integer(rom_H4_black_addr)); -- Het row data
+   rom_H4_black_bit <= rom_H4_black_data(to_integer(rom_H4_black_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H5_black_addr <= pix_y(5 downto 0) - H5_y_t;
+   rom_H5_black_col <= pix_x(5 downto 0) - H5_x_l; -- ROM column
+   rom_H5_black_data <= Board1(39)(to_integer(rom_H5_black_addr)); -- Het row data
+   rom_H5_black_bit <= rom_H5_black_data(to_integer(rom_H5_black_col));-- Het column bit
+
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H6_black_addr <= pix_y(5 downto 0) - H6_y_t;
+   rom_H6_black_col <= pix_x(5 downto 0) - H6_x_l; -- ROM column
+   rom_H6_black_data <= Board1(47)(to_integer(rom_H6_black_addr)); -- Het row data
+   rom_H6_black_bit <= rom_H6_black_data(to_integer(rom_H6_black_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H7_black_addr <= pix_y(5 downto 0) - H7_y_t;
+   rom_H7_black_col <= pix_x(5 downto 0) - H7_x_l; -- ROM column
+   rom_H7_black_data <= Board1(55)(to_integer(rom_H7_black_addr)); -- Het row data
+   rom_H7_black_bit <= rom_H7_black_data(to_integer(rom_H7_black_col));-- Het column bit
+   
+-- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
+   rom_H8_black_addr <= pix_y(5 downto 0) - H8_y_t;
+   rom_H8_black_col <= pix_x(5 downto 0) - H8_x_l; -- ROM column
+   rom_H8_black_data <= Board1(63)(to_integer(rom_H8_black_addr)); -- Het row data
+   rom_H8_black_bit <= rom_H8_black_data(to_integer(rom_H8_black_col));-- Het column bit      
+
+
+-- Turn ball on only if within square and the ROM bit is 1.
+   A1_white_piece_on <= '1' when (A1_on = '1') and (rom_A1_white_bit = '1') else '0';
+   A2_white_piece_on <= '1' when (A2_on = '1') and (rom_A2_white_bit = '1') else '0';
+   A3_white_piece_on <= '1' when (A3_on = '1') and (rom_A3_white_bit = '1') else '0';
+   A4_white_piece_on <= '1' when (A4_on = '1') and (rom_A4_white_bit = '1') else '0';   
+   A5_white_piece_on <= '1' when (A5_on = '1') and (rom_A5_white_bit = '1') else '0';
+   A6_white_piece_on <= '1' when (A6_on = '1') and (rom_A6_white_bit = '1') else '0';
+   A7_white_piece_on <= '1' when (A7_on = '1') and (rom_A7_white_bit = '1') else '0';
+   A8_white_piece_on <= '1' when (A8_on = '1') and (rom_A8_white_bit = '1') else '0';
+ 
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   B1_white_piece_on <= '1' when (B1_on = '1') and (rom_B1_white_bit = '1') else '0';
+   B2_white_piece_on <= '1' when (B2_on = '1') and (rom_B2_white_bit = '1') else '0';
+   B3_white_piece_on <= '1' when (B3_on = '1') and (rom_B3_white_bit = '1') else '0';
+   B4_white_piece_on <= '1' when (B4_on = '1') and (rom_B4_white_bit = '1') else '0';   
+   B5_white_piece_on <= '1' when (B5_on = '1') and (rom_B5_white_bit = '1') else '0';
+   B6_white_piece_on <= '1' when (B6_on = '1') and (rom_B6_white_bit = '1') else '0';
+   B7_white_piece_on <= '1' when (B7_on = '1') and (rom_B7_white_bit = '1') else '0';
+   B8_white_piece_on <= '1' when (B8_on = '1') and (rom_B8_white_bit = '1') else '0';
+   
+ -- Turn ball on only if within square Bnd the ROM bit is 1.
+   C1_white_piece_on <= '1' when (C1_on = '1') and (rom_C1_white_bit = '1') else '0';
+   C2_white_piece_on <= '1' when (C2_on = '1') and (rom_C2_white_bit = '1') else '0';
+   C3_white_piece_on <= '1' when (C3_on = '1') and (rom_C3_white_bit = '1') else '0';
+   C4_white_piece_on <= '1' when (C4_on = '1') and (rom_C4_white_bit = '1') else '0';   
+   C5_white_piece_on <= '1' when (C5_on = '1') and (rom_C5_white_bit = '1') else '0';
+   C6_white_piece_on <= '1' when (C6_on = '1') and (rom_C6_white_bit = '1') else '0';
+   C7_white_piece_on <= '1' when (C7_on = '1') and (rom_C7_white_bit = '1') else '0';
+   C8_white_piece_on <= '1' when (C8_on = '1') and (rom_C8_white_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   D1_white_piece_on <= '1' when (D1_on = '1') and (rom_D1_white_bit = '1') else '0';
+   D2_white_piece_on <= '1' when (D2_on = '1') and (rom_D2_white_bit = '1') else '0';
+   D3_white_piece_on <= '1' when (D3_on = '1') and (rom_D3_white_bit = '1') else '0';
+   D4_white_piece_on <= '1' when (D4_on = '1') and (rom_D4_white_bit = '1') else '0';   
+   D5_white_piece_on <= '1' when (D5_on = '1') and (rom_D5_white_bit = '1') else '0';
+   D6_white_piece_on <= '1' when (D6_on = '1') and (rom_D6_white_bit = '1') else '0';
+   D7_white_piece_on <= '1' when (D7_on = '1') and (rom_D7_white_bit = '1') else '0';
+   D8_white_piece_on <= '1' when (D8_on = '1') and (rom_D8_white_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   E1_white_piece_on <= '1' when (E1_on = '1') and (rom_E1_white_bit = '1') else '0';
+   E2_white_piece_on <= '1' when (E2_on = '1') and (rom_E2_white_bit = '1') else '0';
+   E3_white_piece_on <= '1' when (E3_on = '1') and (rom_E3_white_bit = '1') else '0';
+   E4_white_piece_on <= '1' when (E4_on = '1') and (rom_E4_white_bit = '1') else '0';   
+   E5_white_piece_on <= '1' when (E5_on = '1') and (rom_E5_white_bit = '1') else '0';
+   E6_white_piece_on <= '1' when (E6_on = '1') and (rom_E6_white_bit = '1') else '0';
+   E7_white_piece_on <= '1' when (E7_on = '1') and (rom_E7_white_bit = '1') else '0';
+   E8_white_piece_on <= '1' when (E8_on = '1') and (rom_E8_white_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   F1_white_piece_on <= '1' when (F1_on = '1') and (rom_F1_white_bit = '1') else '0';
+   F2_white_piece_on <= '1' when (F2_on = '1') and (rom_F2_white_bit = '1') else '0';
+   F3_white_piece_on <= '1' when (F3_on = '1') and (rom_F3_white_bit = '1') else '0';
+   F4_white_piece_on <= '1' when (F4_on = '1') and (rom_F4_white_bit = '1') else '0';   
+   F5_white_piece_on <= '1' when (F5_on = '1') and (rom_F5_white_bit = '1') else '0';
+   F6_white_piece_on <= '1' when (F6_on = '1') and (rom_F6_white_bit = '1') else '0';
+   F7_white_piece_on <= '1' when (F7_on = '1') and (rom_F7_white_bit = '1') else '0';
+   F8_white_piece_on <= '1' when (F8_on = '1') and (rom_F8_white_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   G1_white_piece_on <= '1' when (G1_on = '1') and (rom_G1_white_bit = '1') else '0';
+   G2_white_piece_on <= '1' when (G2_on = '1') and (rom_G2_white_bit = '1') else '0';
+   G3_white_piece_on <= '1' when (G3_on = '1') and (rom_G3_white_bit = '1') else '0';
+   G4_white_piece_on <= '1' when (G4_on = '1') and (rom_G4_white_bit = '1') else '0';   
+   G5_white_piece_on <= '1' when (G5_on = '1') and (rom_G5_white_bit = '1') else '0';
+   G6_white_piece_on <= '1' when (G6_on = '1') and (rom_G6_white_bit = '1') else '0';
+   G7_white_piece_on <= '1' when (G7_on = '1') and (rom_G7_white_bit = '1') else '0';
+   G8_white_piece_on <= '1' when (G8_on = '1') and (rom_G8_white_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   H1_white_piece_on <= '1' when (H1_on = '1') and (rom_H1_white_bit = '1') else '0';
+   H2_white_piece_on <= '1' when (H2_on = '1') and (rom_H2_white_bit = '1') else '0';
+   H3_white_piece_on <= '1' when (H3_on = '1') and (rom_H3_white_bit = '1') else '0';
+   H4_white_piece_on <= '1' when (H4_on = '1') and (rom_H4_white_bit = '1') else '0';   
+   H5_white_piece_on <= '1' when (H5_on = '1') and (rom_H5_white_bit = '1') else '0';
+   H6_white_piece_on <= '1' when (H6_on = '1') and (rom_H6_white_bit = '1') else '0';
+   H7_white_piece_on <= '1' when (H7_on = '1') and (rom_H7_white_bit = '1') else '0';
+   H8_white_piece_on <= '1' when (H8_on = '1') and (rom_H8_white_bit = '1') else '0';     
+   
+   -- Turn ball on only if within square and the ROM bit is 1.
+   A1_black_piece_on <= '1' when (A1_on = '1') and (rom_A1_black_bit = '1') else '0';
+   A2_black_piece_on <= '1' when (A2_on = '1') and (rom_A2_black_bit = '1') else '0';
+   A3_black_piece_on <= '1' when (A3_on = '1') and (rom_A3_black_bit = '1') else '0';
+   A4_black_piece_on <= '1' when (A4_on = '1') and (rom_A4_black_bit = '1') else '0';   
+   A5_black_piece_on <= '1' when (A5_on = '1') and (rom_A5_black_bit = '1') else '0';
+   A6_black_piece_on <= '1' when (A6_on = '1') and (rom_A6_black_bit = '1') else '0';
+   A7_black_piece_on <= '1' when (A7_on = '1') and (rom_A7_black_bit = '1') else '0';
+   A8_black_piece_on <= '1' when (A8_on = '1') and (rom_A8_black_bit = '1') else '0';
+ 
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   B1_black_piece_on <= '1' when (B1_on = '1') and (rom_B1_black_bit = '1') else '0';
+   B2_black_piece_on <= '1' when (B2_on = '1') and (rom_B2_black_bit = '1') else '0';
+   B3_black_piece_on <= '1' when (B3_on = '1') and (rom_B3_black_bit = '1') else '0';
+   B4_black_piece_on <= '1' when (B4_on = '1') and (rom_B4_black_bit = '1') else '0';   
+   B5_black_piece_on <= '1' when (B5_on = '1') and (rom_B5_black_bit = '1') else '0';
+   B6_black_piece_on <= '1' when (B6_on = '1') and (rom_B6_black_bit = '1') else '0';
+   B7_black_piece_on <= '1' when (B7_on = '1') and (rom_B7_black_bit = '1') else '0';
+   B8_black_piece_on <= '1' when (B8_on = '1') and (rom_B8_black_bit = '1') else '0';
+   
+ -- Turn ball on only if within square Bnd the ROM bit is 1.
+   C1_black_piece_on <= '1' when (C1_on = '1') and (rom_C1_black_bit = '1') else '0';
+   C2_black_piece_on <= '1' when (C2_on = '1') and (rom_C2_black_bit = '1') else '0';
+   C3_black_piece_on <= '1' when (C3_on = '1') and (rom_C3_black_bit = '1') else '0';
+   C4_black_piece_on <= '1' when (C4_on = '1') and (rom_C4_black_bit = '1') else '0';   
+   C5_black_piece_on <= '1' when (C5_on = '1') and (rom_C5_black_bit = '1') else '0';
+   C6_black_piece_on <= '1' when (C6_on = '1') and (rom_C6_black_bit = '1') else '0';
+   C7_black_piece_on <= '1' when (C7_on = '1') and (rom_C7_black_bit = '1') else '0';
+   C8_black_piece_on <= '1' when (C8_on = '1') and (rom_C8_black_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   D1_black_piece_on <= '1' when (D1_on = '1') and (rom_D1_black_bit = '1') else '0';
+   D2_black_piece_on <= '1' when (D2_on = '1') and (rom_D2_black_bit = '1') else '0';
+   D3_black_piece_on <= '1' when (D3_on = '1') and (rom_D3_black_bit = '1') else '0';
+   D4_black_piece_on <= '1' when (D4_on = '1') and (rom_D4_black_bit = '1') else '0';   
+   D5_black_piece_on <= '1' when (D5_on = '1') and (rom_D5_black_bit = '1') else '0';
+   D6_black_piece_on <= '1' when (D6_on = '1') and (rom_D6_black_bit = '1') else '0';
+   D7_black_piece_on <= '1' when (D7_on = '1') and (rom_D7_black_bit = '1') else '0';
+   D8_black_piece_on <= '1' when (D8_on = '1') and (rom_D8_black_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   E1_black_piece_on <= '1' when (E1_on = '1') and (rom_E1_black_bit = '1') else '0';
+   E2_black_piece_on <= '1' when (E2_on = '1') and (rom_E2_black_bit = '1') else '0';
+   E3_black_piece_on <= '1' when (E3_on = '1') and (rom_E3_black_bit = '1') else '0';
+   E4_black_piece_on <= '1' when (E4_on = '1') and (rom_E4_black_bit = '1') else '0';   
+   E5_black_piece_on <= '1' when (E5_on = '1') and (rom_E5_black_bit = '1') else '0';
+   E6_black_piece_on <= '1' when (E6_on = '1') and (rom_E6_black_bit = '1') else '0';
+   E7_black_piece_on <= '1' when (E7_on = '1') and (rom_E7_black_bit = '1') else '0';
+   E8_black_piece_on <= '1' when (E8_on = '1') and (rom_E8_black_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   F1_black_piece_on <= '1' when (F1_on = '1') and (rom_F1_black_bit = '1') else '0';
+   F2_black_piece_on <= '1' when (F2_on = '1') and (rom_F2_black_bit = '1') else '0';
+   F3_black_piece_on <= '1' when (F3_on = '1') and (rom_F3_black_bit = '1') else '0';
+   F4_black_piece_on <= '1' when (F4_on = '1') and (rom_F4_black_bit = '1') else '0';   
+   F5_black_piece_on <= '1' when (F5_on = '1') and (rom_F5_black_bit = '1') else '0';
+   F6_black_piece_on <= '1' when (F6_on = '1') and (rom_F6_black_bit = '1') else '0';
+   F7_black_piece_on <= '1' when (F7_on = '1') and (rom_F7_black_bit = '1') else '0';
+   F8_black_piece_on <= '1' when (F8_on = '1') and (rom_F8_black_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   G1_black_piece_on <= '1' when (G1_on = '1') and (rom_G1_black_bit = '1') else '0';
+   G2_black_piece_on <= '1' when (G2_on = '1') and (rom_G2_black_bit = '1') else '0';
+   G3_black_piece_on <= '1' when (G3_on = '1') and (rom_G3_black_bit = '1') else '0';
+   G4_black_piece_on <= '1' when (G4_on = '1') and (rom_G4_black_bit = '1') else '0';   
+   G5_black_piece_on <= '1' when (G5_on = '1') and (rom_G5_black_bit = '1') else '0';
+   G6_black_piece_on <= '1' when (G6_on = '1') and (rom_G6_black_bit = '1') else '0';
+   G7_black_piece_on <= '1' when (G7_on = '1') and (rom_G7_black_bit = '1') else '0';
+   G8_black_piece_on <= '1' when (G8_on = '1') and (rom_G8_black_bit = '1') else '0';
+   
+-- Turn ball on only if within square Bnd the ROM bit is 1.
+   H1_black_piece_on <= '1' when (H1_on = '1') and (rom_H1_black_bit = '1') else '0';
+   H2_black_piece_on <= '1' when (H2_on = '1') and (rom_H2_black_bit = '1') else '0';
+   H3_black_piece_on <= '1' when (H3_on = '1') and (rom_H3_black_bit = '1') else '0';
+   H4_black_piece_on <= '1' when (H4_on = '1') and (rom_H4_black_bit = '1') else '0';   
+   H5_black_piece_on <= '1' when (H5_on = '1') and (rom_H5_black_bit = '1') else '0';
+   H6_black_piece_on <= '1' when (H6_on = '1') and (rom_H6_black_bit = '1') else '0';
+   H7_black_piece_on <= '1' when (H7_on = '1') and (rom_H7_black_bit = '1') else '0';
+   H8_black_piece_on <= '1' when (H8_on = '1') and (rom_H8_black_bit = '1') else '0';                    
+
+   white_rgb <= "111"; -- red
+   black_rgb <= "000"; -- red
+   
+
+
+
+
+-- ======================================================================================================
+-- turn on the appropriate color depending on the current pixel position.
+   process (video_on, dark_rgb, light_rgb, wall_on, bar_on, rd_ball_on_black,rd_ball_on_white,white_rgb, black_rgb,WtRook1_on,
+    A8_on, A7_on, A6_on, A5_on, A4_on, A3_on, A2_on, A1_on,    
+    B8_on, B7_on, B6_on, B5_on, B4_on, B3_on, B2_on, B1_on,
+    C8_on, C7_on, C6_on, C5_on, C4_on, C3_on, C2_on, C1_on,
+    D8_on, D7_on, D6_on, D5_on, D4_on, D3_on, D2_on, D1_on,
+    E8_on, E7_on, E6_on, E5_on, E4_on, E3_on, E2_on, E1_on,
+    F8_on, F7_on, F6_on, F5_on, F4_on, F3_on, F2_on, F1_on,
+    G8_on, G7_on, G6_on, G5_on, G4_on, G3_on, G2_on, G1_on,
+    H8_on, H7_on, H6_on, H5_on, H4_on, H3_on, H2_on, H1_on,
+    A1_white_piece_on, A2_white_piece_on, A3_white_piece_on, A4_white_piece_on, A5_white_piece_on, A6_white_piece_on, A7_white_piece_on, A8_white_piece_on,
+    B1_white_piece_on, B2_white_piece_on, B3_white_piece_on, B4_white_piece_on, B5_white_piece_on, B6_white_piece_on, B7_white_piece_on, B8_white_piece_on,
+    C1_white_piece_on, C2_white_piece_on, C3_white_piece_on, C4_white_piece_on, C5_white_piece_on, C6_white_piece_on, C7_white_piece_on, C8_white_piece_on,
+    D1_white_piece_on, D2_white_piece_on, D3_white_piece_on, D4_white_piece_on, D5_white_piece_on, D6_white_piece_on, D7_white_piece_on, D8_white_piece_on,
+    E1_white_piece_on, E2_white_piece_on, E3_white_piece_on, E4_white_piece_on, E5_white_piece_on, E6_white_piece_on, E7_white_piece_on, E8_white_piece_on,
+    F1_white_piece_on, F2_white_piece_on, F3_white_piece_on, F4_white_piece_on, F5_white_piece_on, F6_white_piece_on, F7_white_piece_on, F8_white_piece_on,
+    G1_white_piece_on, G2_white_piece_on, G3_white_piece_on, G4_white_piece_on, G5_white_piece_on, G6_white_piece_on, G7_white_piece_on, G8_white_piece_on,
+    H1_white_piece_on, H2_white_piece_on, H3_white_piece_on, H4_white_piece_on, H5_white_piece_on, H6_white_piece_on, H7_white_piece_on, H8_white_piece_on,
+    A1_black_piece_on, A2_black_piece_on, A3_black_piece_on, A4_black_piece_on, A5_black_piece_on, A6_black_piece_on, A7_black_piece_on, A8_black_piece_on,
+    B1_black_piece_on, B2_black_piece_on, B3_black_piece_on, B4_black_piece_on, B5_black_piece_on, B6_black_piece_on, B7_black_piece_on, B8_black_piece_on,
+    C1_black_piece_on, C2_black_piece_on, C3_black_piece_on, C4_black_piece_on, C5_black_piece_on, C6_black_piece_on, C7_black_piece_on, C8_black_piece_on,
+    D1_black_piece_on, D2_black_piece_on, D3_black_piece_on, D4_black_piece_on, D5_black_piece_on, D6_black_piece_on, D7_black_piece_on, D8_black_piece_on,
+    E1_black_piece_on, E2_black_piece_on, E3_black_piece_on, E4_black_piece_on, E5_black_piece_on, E6_black_piece_on, E7_black_piece_on, E8_black_piece_on,
+    F1_black_piece_on, F2_black_piece_on, F3_black_piece_on, F4_black_piece_on, F5_black_piece_on, F6_black_piece_on, F7_black_piece_on, F8_black_piece_on,
+    G1_black_piece_on, G2_black_piece_on, G3_black_piece_on, G4_black_piece_on, G5_black_piece_on, G6_black_piece_on, G7_black_piece_on, G8_black_piece_on,
+    H1_black_piece_on, H2_black_piece_on, H3_black_piece_on, H4_black_piece_on, H5_black_piece_on, H6_black_piece_on, H7_black_piece_on, H8_black_piece_on)
+      begin
+      if (video_on = '0') then
+         graph_rgb <= "111"; -- blank
+      else 
+         if (A1_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (A2_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (A3_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (A4_white_piece_on = '1') then
+            graph_rgb <= white_rgb;        
+         elsif (A5_white_piece_on = '1') then
+            graph_rgb <= white_rgb;         
+         elsif (A6_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+         elsif (A7_white_piece_on = '1') then
+            graph_rgb <= white_rgb;       
+         elsif (A8_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (B1_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (B2_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (B3_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (B4_white_piece_on = '1') then
+            graph_rgb <= white_rgb;        
+         elsif (B5_white_piece_on = '1') then
+            graph_rgb <= white_rgb;         
+         elsif (B6_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+         elsif (B7_white_piece_on = '1') then
+            graph_rgb <= white_rgb;       
+         elsif (B8_white_piece_on = '1') then
+            graph_rgb <= white_rgb; 
+         elsif (C1_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (C2_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (C3_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (C4_white_piece_on = '1') then
+            graph_rgb <= white_rgb;        
+         elsif (C5_white_piece_on = '1') then
+            graph_rgb <= white_rgb;         
+         elsif (C6_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+         elsif (C7_white_piece_on = '1') then
+            graph_rgb <= white_rgb;       
+         elsif (C8_white_piece_on = '1') then
+            graph_rgb <= white_rgb;      
+         elsif (D1_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (D2_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (D3_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (D4_white_piece_on = '1') then
+            graph_rgb <= white_rgb;        
+         elsif (D5_white_piece_on = '1') then
+            graph_rgb <= white_rgb;         
+         elsif (D6_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+         elsif (D7_white_piece_on = '1') then
+            graph_rgb <= white_rgb;       
+         elsif (D8_white_piece_on = '1') then
+            graph_rgb <= white_rgb;                                      
+         elsif (E1_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (E2_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (E3_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (E4_white_piece_on = '1') then
+            graph_rgb <= white_rgb;        
+         elsif (E5_white_piece_on = '1') then
+            graph_rgb <= white_rgb;         
+         elsif (E6_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+         elsif (E7_white_piece_on = '1') then
+            graph_rgb <= white_rgb;       
+         elsif (E8_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+         elsif (F1_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (F2_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (F3_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (F4_white_piece_on = '1') then
+            graph_rgb <= white_rgb;        
+         elsif (F5_white_piece_on = '1') then
+            graph_rgb <= white_rgb;         
+         elsif (F6_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+         elsif (F7_white_piece_on = '1') then
+            graph_rgb <= white_rgb;       
+         elsif (F8_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+          elsif (G1_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (G2_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (G3_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (G4_white_piece_on = '1') then
+            graph_rgb <= white_rgb;        
+         elsif (G5_white_piece_on = '1') then
+            graph_rgb <= white_rgb;         
+         elsif (G6_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+         elsif (G7_white_piece_on = '1') then
+            graph_rgb <= white_rgb;       
+         elsif (G8_white_piece_on = '1') then
+            graph_rgb <= white_rgb;      
+         elsif (H1_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (H2_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (H3_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (H4_white_piece_on = '1') then
+            graph_rgb <= white_rgb;        
+         elsif (H5_white_piece_on = '1') then
+            graph_rgb <= white_rgb;         
+         elsif (H6_white_piece_on = '1') then
+            graph_rgb <= white_rgb;   
+         elsif (H7_white_piece_on = '1') then
+            graph_rgb <= white_rgb;       
+         elsif (H8_white_piece_on = '1') then
+            graph_rgb <= white_rgb;
+         elsif (A1_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (A2_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (A3_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (A4_black_piece_on = '1') then
+            graph_rgb <= black_rgb;        
+         elsif (A5_black_piece_on = '1') then
+            graph_rgb <= black_rgb;         
+         elsif (A6_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+         elsif (A7_black_piece_on = '1') then
+            graph_rgb <= black_rgb;       
+         elsif (A8_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (B1_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (B2_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (B3_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (B4_black_piece_on = '1') then
+            graph_rgb <= black_rgb;        
+         elsif (B5_black_piece_on = '1') then
+            graph_rgb <= black_rgb;         
+         elsif (B6_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+         elsif (B7_black_piece_on = '1') then
+            graph_rgb <= black_rgb;       
+         elsif (B8_black_piece_on = '1') then
+            graph_rgb <= black_rgb; 
+         elsif (C1_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (C2_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (C3_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (C4_black_piece_on = '1') then
+            graph_rgb <= black_rgb;        
+         elsif (C5_black_piece_on = '1') then
+            graph_rgb <= black_rgb;         
+         elsif (C6_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+         elsif (C7_black_piece_on = '1') then
+            graph_rgb <= black_rgb;       
+         elsif (C8_black_piece_on = '1') then
+            graph_rgb <= black_rgb;      
+         elsif (D1_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (D2_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (D3_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (D4_black_piece_on = '1') then
+            graph_rgb <= black_rgb;        
+         elsif (D5_black_piece_on = '1') then
+            graph_rgb <= black_rgb;         
+         elsif (D6_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+         elsif (D7_black_piece_on = '1') then
+            graph_rgb <= black_rgb;       
+         elsif (D8_black_piece_on = '1') then
+            graph_rgb <= black_rgb;                                      
+         elsif (E1_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (E2_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (E3_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (E4_black_piece_on = '1') then
+            graph_rgb <= black_rgb;        
+         elsif (E5_black_piece_on = '1') then
+            graph_rgb <= black_rgb;         
+         elsif (E6_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+         elsif (E7_black_piece_on = '1') then
+            graph_rgb <= black_rgb;       
+         elsif (E8_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+         elsif (F1_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (F2_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (F3_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (F4_black_piece_on = '1') then
+            graph_rgb <= black_rgb;        
+         elsif (F5_black_piece_on = '1') then
+            graph_rgb <= black_rgb;         
+         elsif (F6_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+         elsif (F7_black_piece_on = '1') then
+            graph_rgb <= black_rgb;       
+         elsif (F8_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+          elsif (G1_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (G2_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (G3_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (G4_black_piece_on = '1') then
+            graph_rgb <= black_rgb;        
+         elsif (G5_black_piece_on = '1') then
+            graph_rgb <= black_rgb;         
+         elsif (G6_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+         elsif (G7_black_piece_on = '1') then
+            graph_rgb <= black_rgb;       
+         elsif (G8_black_piece_on = '1') then
+            graph_rgb <= black_rgb;      
+         elsif (H1_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (H2_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (H3_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         elsif (H4_black_piece_on = '1') then
+            graph_rgb <= black_rgb;        
+         elsif (H5_black_piece_on = '1') then
+            graph_rgb <= black_rgb;         
+         elsif (H6_black_piece_on = '1') then
+            graph_rgb <= black_rgb;   
+         elsif (H7_black_piece_on = '1') then
+            graph_rgb <= black_rgb;       
+         elsif (H8_black_piece_on = '1') then
+            graph_rgb <= black_rgb;
+         
+         
+         
+         elsif(A8_on = '1') then
+            graph_rgb <= dark_rgb;
+         elsif (A7_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (A6_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (A5_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (A4_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (A3_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (A2_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (A1_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (B8_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (B7_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (B6_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (B5_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (B4_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (B3_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (B2_on = '1') then
+            graph_rgb <= light_rgb; 
+         elsif (B1_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (C8_on = '1') then
+            graph_rgb <= dark_rgb;
+         elsif (C7_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (C6_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (C5_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (C4_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (C3_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (C2_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (C1_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (D8_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (D7_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (D6_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (D5_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (D4_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (D3_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (D2_on = '1') then
+            graph_rgb <= light_rgb; 
+         elsif (D1_on = '1') then   
+            graph_rgb <= dark_rgb; 
+         elsif (E8_on = '1') then
+            graph_rgb <= dark_rgb;
+         elsif (E7_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (E6_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (E5_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (E4_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (E3_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (E2_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (E1_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (F8_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (F7_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (F6_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (F5_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (F4_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (F3_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (F2_on = '1') then
+            graph_rgb <= light_rgb; 
+         elsif (F1_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (G8_on = '1') then
+            graph_rgb <= dark_rgb;
+         elsif (G7_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (G6_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (G5_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (G4_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (G3_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (G2_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (G1_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (H8_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (H7_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (H6_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (H5_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (H4_on = '1') then
+            graph_rgb <= light_rgb;
+         elsif (H3_on = '1') then   
+            graph_rgb <= dark_rgb;
+         elsif (H2_on = '1') then
+            graph_rgb <= light_rgb; 
+         elsif (H1_on = '1') then   
+            graph_rgb <= dark_rgb;
+
+        
+            
+            
+            
+            
+                                                   
+
+         else
+            graph_rgb <= "000"; -- yellow bkgnd
+         end if;
+      end if;
+   end process;
+
+end rtl;
