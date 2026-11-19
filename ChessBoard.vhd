@@ -27,7 +27,7 @@ use IEEE.NUMERIC_STD.ALL;
 entity ChessBoard is
   Port (piece, move: in std_logic_vector(5 downto 0);
         enable, clk, reset, set: in std_logic;
-       -- promote: in std_logic_vector(2 downto 0);
+        promote: in std_logic_vector(1 downto 0);
         boardState: out std_logic_vector(255 downto 0);
         ready: out std_logic);
 end ChessBoard;
@@ -240,8 +240,8 @@ begin
             coordsnext(0)(0) <= "0100";
             coordsnext(0)(1) <= "0010";
             coordsnext(0)(2) <= "0011";
-            coordsnext(0)(3) <= "0101";
-            coordsnext(0)(4) <= "0110";
+            coordsnext(0)(3) <= "0110";
+            coordsnext(0)(4) <= "0101";
             coordsnext(0)(5) <= "0011";
             coordsnext(0)(6) <= "0010";
             coordsnext(0)(7) <= "0100";
@@ -296,8 +296,8 @@ begin
             coordsnext(7)(0) <= "1100";
             coordsnext(7)(1) <= "1010";
             coordsnext(7)(2) <= "1011";
-            coordsnext(7)(3) <= "1101";
-            coordsnext(7)(4) <= "1110";
+            coordsnext(7)(3) <= "1110";
+            coordsnext(7)(4) <= "1101";
             coordsnext(7)(5) <= "1011";
             coordsnext(7)(6) <= "1010";
             coordsnext(7)(7) <= "1100";
@@ -307,7 +307,21 @@ begin
             coordsnext(from2)(from1) <= "0000";
             ready <= '1';
         end if;
-    end process;     
+    end process;
+    promotion: for i in 0 to 7 generate
+        with promote select
+            coordsnext(i)(0)(2 downto 0) <= "101" when "00",
+                                            "010" when "01",
+                                            "011" when "10",
+                                            "100" when "11",
+                                            "101" when others;
+        with promote select
+            coordsnext(i)(7)(2 downto 0) <= "101" when "00",  
+                                            "010" when "01",  
+                                            "011" when "10",  
+                                            "100" when "11",  
+                                            "101" when others; 
+    end generate;
     boardstate(3 downto 0) <= coords(0)(0);
     boardstate(7 downto 4) <= coords(0)(1);
     boardstate(11 downto 8) <= coords(0)(2);
