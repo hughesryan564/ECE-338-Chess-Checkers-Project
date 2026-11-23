@@ -31,6 +31,8 @@ architecture rtl of pong_graph_st is
    constant MAX_X: integer := 640;
    constant MAX_Y: integer := 480;
 
+--Nadia
+
 -- A8
    constant A8_X_L: integer := 0;
    constant A8_X_R: integer := 45;
@@ -476,7 +478,7 @@ architecture rtl of pong_graph_st is
 -- round ball image
    type rom_type is array(0 to 44) of std_logic_vector(0 to 44);
 
-
+--Andrew
    constant KING_ROM: rom_type:= (
 "000000000000000000000000000000000000000000000",
 "000000000000000000000000000000000000000000000",
@@ -810,7 +812,7 @@ architecture rtl of pong_graph_st is
 
 
 
-
+--Nadia
    signal rom_A1_white_addr, rom_A1_white_col: unsigned(5 downto 0);
    signal rom_A1_white_data: std_logic_vector(44 downto 0);
    signal rom_A1_white_bit: std_logic;
@@ -1354,7 +1356,8 @@ architecture rtl of pong_graph_st is
    signal H1_black_piece_on, H2_black_piece_on, H3_black_piece_on, H4_black_piece_on, H5_black_piece_on, H6_black_piece_on, H7_black_piece_on, H8_black_piece_on: std_logic;
       
    signal dark_rgb, light_rgb, black_rgb,white_rgb, bar_rgb: std_logic_vector(2 downto 0);
-   
+
+   --Andrew
    type chessboard is array (63 downto 0) of ROM_type;
    signal board, board1: chessboard;
    type chunked is array (63 downto 0) of std_logic_vector(3 downto 0);
@@ -1457,6 +1460,7 @@ architecture rtl of pong_graph_st is
    refr_tick <= '1' when (pix_y = 1) and (pix_x = 1) else '0';
 
 -- ======================================================================================================
+--Nadia
 
    A8_on <= '1' when (A8_X_L <= pix_x) and (pix_x <= A8_X_R) and (A8_Y_T <= pix_y) and (pix_y <= A8_Y_B) else '0';
    A7_on <= '1' when (A7_X_L <= pix_x) and (pix_x <= A7_X_R) and (A7_Y_T <= pix_y) and (pix_y <= A7_Y_B) else '0';
